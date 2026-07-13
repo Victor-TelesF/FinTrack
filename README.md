@@ -176,7 +176,7 @@ Acesse em `http://localhost:8000`.
 
 ## 🤝 Créditos
 
-Desenvolvido por [@Victor_TelesF](https://github.com/Victor4654). 
+Desenvolvido por [@Victor_TelesF](https://github.com/Victor-TelesF). 
 O projeto conta com apoio técnico do **Claude (Anthropic)** como revisor de arquitetura e tutor de OOP, garantindo que as decisões de design sigam as melhores práticas de mercado.
 
 ---
