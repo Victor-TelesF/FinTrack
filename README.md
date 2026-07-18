@@ -42,6 +42,7 @@ Praticar **OOP Avançado** e **Arquitetura Limpa** em um cenário financeiro rea
 - **Precisão Financeira:** Uso rigoroso de `Decimal` para evitar erros de arredondamento.
 - **Gestão de Posições:** Cálculo dinâmico de preço médio e quantidade baseado em histórico cronológico de transações.
 - **Injeção de Dependência:** Fontes de preço (`PriceSource`) injetadas via Protocolos, facilitando testes e extensibilidade.
+- **Persistência Polimórfica:** Hierarquia de ativos mapeada para o banco via *Joined Table Inheritance* (SQLAlchemy 2.0), preservando o polimorfismo do domínio também na camada de dados.
 
 ## 🛠️ Stack Tecnológica
 
@@ -63,16 +64,18 @@ O projeto segue a regra de ouro: **A camada de domínio nunca importa nada de in
 ```text
 app/
 ├── main.py               ← Ponto de entrada da API
-├── database.py           ← Conexão com o banco
-├── auth/                 ← Login, JWT e dependências
-├── domain/               ← Lógica de Negócio (Python Puro)
-│   ├── assets/           ← Hierarquia de Ativos e Strategy
-│   ├── portfolio/        ← Transaction, Position e Portfolio
-│   ├── strategies/       ← Registro de estratégias de rentabilidade
-│   └── protocols.py      ← Contratos (PriceSource, ReturnStrategy)
-├── models/               ← Tabelas SQLAlchemy
-├── schemas/              ← Validação Pydantic
-└── routers/              ← Endpoints FastAPI
+├── config.py              ← Settings (pydantic-settings), lê .env
+├── database.py            ← Engine, Session e Base (SQLAlchemy 2.0)
+├── dependencies.py        ← Dependências FastAPI (get_db, etc.)
+├── auth/                  ← Login, JWT e dependências
+├── domain/                ← Lógica de Negócio (Python Puro)
+│   ├── assets/            ← Hierarquia de Ativos e Strategy
+│   ├── portfolio/         ← Transaction, Position e Portfolio
+│   ├── strategies/        ← Registro de estratégias de rentabilidade
+│   └── protocols.py       ← Contratos (PriceSource, ReturnStrategy)
+├── models/                ← Tabelas SQLAlchemy (Joined Table Inheritance)
+├── schemas/               ← Validação Pydantic
+└── routers/                ← Endpoints FastAPI
 ```
 
 ---
@@ -86,6 +89,8 @@ Asset (ABC)
 ├── FixedIncome (ABC) -> CDB, GovernmentBond
 └── VariableIncome (ABC) -> Stock, RealEstateFund, Cryptocurrency
 ```
+
+Essa mesma hierarquia é replicada na camada de persistência via **Joined Table Inheritance**: cada classe que adiciona um campo próprio ganha uma tabela própria, ligada por chave estrangeira à tabela pai imediata, com uma coluna discriminadora resolvendo qual subclasse instanciar na leitura.
 
 ### Contrato Unificado
 Todos os ativos e estratégias seguem a mesma assinatura, garantindo o Princípio de Substituição de Liskov (LSP):
@@ -107,6 +112,9 @@ def calculate_return(self, context: ReturnContext) -> Decimal:
 | **Indexação por Ticker** | Evita bugs de identidade de objeto ao gerenciar posições em carteira. |
 | **PriceSource via Protocol** | Permite trocar fontes de preço (API Real vs Mock) sem recriar objetos da carteira. |
 | **Enums em Minúsculo** | Garante compatibilidade com serialização JSON e frontends (case-sensitive). |
+| **Posição não persistida** | `posicoes` não vira tabela própria — é recalculada em memória a partir de `transacoes`, reaproveitando a `Position` do domínio já testada, em vez de duplicar a lógica em SQL. |
+| **IDs como UUID** | Todas as tabelas usam `UUID` em vez de `int` autoincremento — não previsível e consistente com os identificadores já usados no domínio (`Transaction`, `Portfolio`). |
+| **Joined Table Inheritance** | Mapeia a hierarquia polimórfica de `Asset` sem colunas `NULL` sobrando (Single Table) nem duplicação de campos comuns (Concrete Table). |
 
 ---
 
@@ -156,7 +164,7 @@ print(portfolio.get_total_pnl(MyPriceSource()))   # Lucro baseado em mercado
 
 - [x] **Etapa 1 — Ativos:** Concluída (Polimorfismo, Strategy, Fisher).
 - [x] **Etapa 2 — Carteira:** Concluída (Transactions, Position, Portfolio).
-- [ ] **Etapa 3 — Persistência:** Em planejamento (SQLAlchemy + Alembic).
+- [ ] **Etapa 3 — Persistência:** 🚧 Em andamento — `config.py`, `database.py` e `dependencies.py` concluídos; modelos SQLAlchemy da hierarquia de ativos (Joined Table Inheritance) em progresso.
 - [ ] **Etapa 4 — Autenticação:** JWT.
 - [ ] **Etapa 5 — API:** Endpoints finais.
 
