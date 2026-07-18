@@ -6,14 +6,14 @@ from decimal import Decimal
 
 import pytest
 
-from app.domain.strategies.cdi import CDIStrategy
-from app.domain.strategies.ipca import IPCAStrategy
-from app.domain.strategies.selic import SelicStrategy
-from app.domain.strategies.prefixada import FixedRateStrategy
-from app.domain.strategies.registry import get_strategy_for
-from app.domain.enums import IndexType, BondIndexType
-from app.domain.exceptions import CdiRateError, IpcaRateError, SelicRateError, InvalidIndexTypeError
-from app.domain.return_context import ReturnContext, MarketRates
+from domain.strategies.cdi import CDIStrategy
+from domain.strategies.ipca import IPCAStrategy
+from domain.strategies.selic import SelicStrategy
+from domain.strategies.prefixada import FixedRateStrategy
+from domain.strategies.registry import get_strategy_for
+from domain.enums import IndexType, BondIndexType
+from domain.exceptions import CdiRateError, IpcaRateError, SelicRateError, InvalidIndexTypeError
+from domain.return_context import ReturnContext, MarketRates
 
 
 class TestCDIStrategy:

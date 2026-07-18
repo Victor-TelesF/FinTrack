@@ -2,7 +2,7 @@
 Fixtures compartilhadas para a suíte de testes do domínio FinTrack.
 
 IMPORTANTE: ajuste os imports em cada arquivo de teste para o caminho real
-dos seus módulos (chutei `app.domain.*` com base na estrutura vista no
+dos seus módulos (chutei `domain.*` com base na estrutura vista no
 VS Code). Os monkeypatches de `reference_date` também assumem que cada
 módulo faz `from ...reference_date import reference_date` (ou caminho
 relativo equivalente) — se o nome do import mudar, ajuste o alvo do patch.

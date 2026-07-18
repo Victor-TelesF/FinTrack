@@ -12,24 +12,24 @@ from datetime import date
 
 import pytest
 
-from app.domain.assets.fixed_income.cdb import CDB
-from app.domain.assets.fixed_income.government_bond import GovernmentBond
-from app.domain.assets.fixed_income.fixed_income import FixedIncome
-from app.domain.enums import LiquidityType, IndexType, BondIndexType
-from app.domain.exceptions import (
+from domain.assets.fixed_income import CDB
+from domain.assets.fixed_income import GovernmentBond
+from domain.assets.fixed_income import FixedIncome
+from domain.enums import LiquidityType, IndexType, BondIndexType
+from domain.exceptions import (
     InvalidRateError,
     InvalidMaturityError,
     InvalidLiquidityError,
     InvalidIndexTypeError,
 )
-from app.domain.return_context import ReturnContext, MarketRates
+from domain.return_context import ReturnContext, MarketRates
 
 
 @pytest.fixture(autouse=True)
 def _freeze_reference_date(monkeypatch, frozen_today):
     """Congela reference_date() para tornar maturity_date determinística."""
     monkeypatch.setattr(
-        "app.domain.assets.fixed_income.fixed_income.reference_date",
+        "domain.assets.fixed_income.fixed_income.reference_date",
         lambda: frozen_today,
     )
 
