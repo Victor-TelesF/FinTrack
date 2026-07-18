@@ -62,21 +62,23 @@ Praticar **OOP Avançado** e **Arquitetura Limpa** em um cenário financeiro rea
 O projeto segue a regra de ouro: **A camada de domínio nunca importa nada de infraestrutura.**
 
 ```text
+domain/                     ← Lógica de Negócio (Python Puro, irmã de app/)
+├── assets/                 ← Hierarquia de Ativos e Strategy
+├── portfolio/              ← Transaction, Position e Portfolio
+├── strategies/             ← Registro de estratégias de rentabilidade
+└── protocols.py            ← Contratos (PriceSource, ReturnStrategy)
+
 app/
-├── main.py               ← Ponto de entrada da API
-├── config.py              ← Settings (pydantic-settings), lê .env
-├── database.py            ← Engine, Session e Base (SQLAlchemy 2.0)
-├── dependencies.py        ← Dependências FastAPI (get_db, etc.)
-├── auth/                  ← Login, JWT e dependências
-├── domain/                ← Lógica de Negócio (Python Puro)
-│   ├── assets/            ← Hierarquia de Ativos e Strategy
-│   ├── portfolio/         ← Transaction, Position e Portfolio
-│   ├── strategies/        ← Registro de estratégias de rentabilidade
-│   └── protocols.py       ← Contratos (PriceSource, ReturnStrategy)
-├── models/                ← Tabelas SQLAlchemy (Joined Table Inheritance)
-├── schemas/               ← Validação Pydantic
-└── routers/                ← Endpoints FastAPI
+├── main.py                ← Ponto de entrada da API
+├── config.py               ← Settings (pydantic-settings), lê .env
+├── database.py             ← Engine, Session e Base (SQLAlchemy 2.0)
+├── dependencies.py         ← Dependências FastAPI (get_db, etc.)
+├── auth/                   ← Login, JWT e dependências
+├── models/                 ← Tabelas SQLAlchemy (Joined Table Inheritance)
+├── schemas/                 ← Validação Pydantic
+└── routers/                 ← Endpoints FastAPI
 ```
+> `domain/` fica na raiz do projeto, ao lado de `app/` — não dentro dela. A camada de domínio não depende da infraestrutura da API; é o inverso.
 
 ---
 
