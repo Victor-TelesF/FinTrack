@@ -22,12 +22,15 @@ class Portfolio:
         wallet_id (str): The identifier for the portfolio wallet.
     """
 
-    def __init__(self, wallet_id: str):
+    def __init__(self, wallet_id: str, id_portfolio: UUID | None = None):
         if not isinstance(wallet_id, str):
             raise InvalidValueError("Valor de wallet_id tem que ser str")
         self._wallet_id = wallet_id
-
-        self._id_portfolio = uuid4()
+        if id_portfolio is None:
+            id_portfolio = uuid4()
+        if not isinstance(id_portfolio, UUID):
+            raise InvalidValueError("id_portfolio tem que ser UUID")
+        self._id_portfolio = id_portfolio
         self._positions: dict[str, Position] = {}
 
     @property

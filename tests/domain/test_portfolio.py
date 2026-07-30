@@ -24,6 +24,7 @@ from domain.portfolio.transaction import Transaction
 from domain.enums import TransactionType
 from domain.exceptions import AssetNotFoundError, InsufficientBalanceError, InvalidValueError
 from domain.assets.variable_income import NationalStock
+from uuid import uuid4, UUID
 
 
 @pytest.fixture(autouse=True)
@@ -69,6 +70,32 @@ class TestPortfolioConstruction:
 
     def test_starts_with_no_positions(self, portfolio):
         assert portfolio.positions == {}
+
+    def test_without_id_portfolio_generates_new_uuid(self):
+        """Regressão: comportamento antigo (sem id_portfolio) continua funcionando."""
+        portfolio = Portfolio(wallet_id="user-123")
+        assert isinstance(portfolio.id_portfolio, UUID)
+
+    def test_can_be_constructed_with_existing_id(self):
+        """Reidratação: passar um id_portfolio existente reaproveita o mesmo UUID,
+        em vez de gerar um novo — essencial para o replay a partir do banco."""
+        existing_id = uuid4()
+        portfolio = Portfolio(wallet_id="user-123", id_portfolio=existing_id)
+        assert portfolio.id_portfolio == existing_id
+
+    def test_invalid_id_portfolio_type_raises(self):
+        with pytest.raises(InvalidValueError):
+            Portfolio(wallet_id="user-123", id_portfolio="not-a-uuid")
+
+    def test_two_portfolios_with_same_id_portfolio_do_not_share_state(self):
+        """Garante que reidratar duas instâncias com o mesmo id_portfolio não
+        cria acoplamento entre elas — cada Portfolio tem suas próprias positions."""
+        shared_id = uuid4()
+        portfolio_a = Portfolio(wallet_id="user-a", id_portfolio=shared_id)
+        portfolio_b = Portfolio(wallet_id="user-b", id_portfolio=shared_id)
+
+        assert portfolio_a.id_portfolio == portfolio_b.id_portfolio
+        assert portfolio_a.positions is not portfolio_b.positions
 
 
 class TestPortfolioBuy:
