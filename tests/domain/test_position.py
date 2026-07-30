@@ -15,17 +15,17 @@ from datetime import date
 
 import pytest
 
-from app.domain.portfolio.position import Position
-from app.domain.portfolio.transaction import Transaction
-from app.domain.assets.variable_income import NationalStock
-from app.domain.enums import TransactionType
-from app.domain.exceptions import InvalidValueError, InsufficientBalanceError
+from domain.portfolio.position import Position
+from domain.portfolio.transaction import Transaction
+from domain.assets.variable_income import NationalStock
+from domain.enums import TransactionType
+from domain.exceptions import InvalidValueError, InsufficientBalanceError
 
 
 @pytest.fixture(autouse=True)
 def _freeze_reference_date(monkeypatch, frozen_today):
     monkeypatch.setattr(
-        "app.domain.portfolio.transaction.reference_date",
+        "domain.portfolio.transaction.reference_date",
         lambda: frozen_today,
     )
 

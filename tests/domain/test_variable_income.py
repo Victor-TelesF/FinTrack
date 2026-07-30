@@ -13,14 +13,14 @@ from decimal import Decimal
 
 import pytest
 
-from app.domain.assets.variable_income.variable_income import VariableIncome
-from app.domain.assets.variable_income.national_stock import NationalStock
-from app.domain.assets.variable_income.international_stock import InternationalStock
-from app.domain.assets.variable_income.real_estate_fund import RealEstateFund
-from app.domain.assets.variable_income.cryptocurrency import Cryptocurrency
-from app.domain.enums import Currency
-from app.domain.exceptions import InvalidPurchasePriceError, InvalidValueError
-from app.domain.return_context import ReturnContext
+from domain.assets.variable_income.variable_income import VariableIncome
+from domain.assets.variable_income.national_stock import NationalStock
+from domain.assets.variable_income.international_stock import InternationalStock
+from domain.assets.variable_income.real_estate_fund import RealEstateFund
+from domain.assets.variable_income.cryptocurrency import Cryptocurrency
+from domain.enums import Currency
+from domain.exceptions import InvalidPurchasePriceError, InvalidValueError
+from domain.return_context import ReturnContext
 
 
 class TestVariableIncomeGuard:

@@ -1,186 +1,236 @@
-# 🏦 FinTrack API
+<p align="center">
+<img src="https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=white" />
+  <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" />
+  <img src="https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white" />
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
+  <img src="https://img.shields.io/badge/pytest-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white" />
+  <img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" />
+</p>
 
-**API REST para gestão de carteiras de investimento com arquitetura de domínio limpa e polimórfica.**
+<h1 align="center">🏦 FinTrack API</h1>
 
-![Python 3.13](https://img.shields.io/badge/Python-3.13-blue?style=flat-square&logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat-square&logo=fastapi)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=flat-square&logo=postgresql&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)
-![pytest](https://img.shields.io/badge/pytest-0A9EDC?style=flat-square&logo=pytest&logoColor=white)
-
----
-
-O **FinTrack** é uma solução robusta para investidores que buscam consolidar carteiras diversificadas. O desafio central do projeto é tratar a rentabilidade de diferentes classes de ativos (renda fixa, variável, cripto) de forma unificada e extensível.
-
-A aplicação utiliza uma **camada de domínio puramente polimórfica**, onde cada ativo adere a um contrato único de cálculo de retorno, permitindo a expansão para novos indexadores ou tipos de ativos sem modificar o núcleo do sistema.
-
-## 📑 Índice
-
-- [🎯 Objetivo do Projeto](#-objetivo-do-projeto)
-- [✨ Características Principais](#-características-principais)
-- [🛠️ Stack Tecnológica](#-stack-tecnológica)
-- [📁 Estrutura e Arquitetura](#-estrutura-e-arquitetura)
-- [🌳 Domínio e Polimorfismo](#-domínio-e-polimorfismo)
-- [🧠 Decisões de Engenharia](#-decisões-de-engenharia)
-- [💻 Exemplo de Uso](#-exemplo-de-uso)
-- [🗺️ Roadmap de Endpoints](#-roadmap-de-endpoints)
-- [✅ Status e Testes](#-status-e-testes)
-- [🚀 Como Executar](#-como-executar)
-- [🤝 Créditos](#-créditos)
+<p align="center">
+    <b>API REST para gestão de carteiras de investimento</b><br>
+  Arquitetura limpa, domínio polimórfico e cálculo de rentabilidade unificado para múltiplas classes de ativos.
+</p>
 
 ---
 
-## 🎯 Objetivo do Projeto
+## 📌 Sobre o Projeto
 
-Praticar **OOP Avançado** e **Arquitetura Limpa** em um cenário financeiro real. O foco está no isolamento total da lógica de negócio (domínio) em relação aos frameworks (FastAPI) e ferramentas de infraestrutura (SQLAlchemy/PostgreSQL).
+O **FinTrack** ataca um problema real do mercado financeiro: **como consolidar e calcular rentabilidade de ativos distintos** (CDBs indexados ao CDI, Tesouro IPCA+/Selic, Ações nacionais/internacionais, FIIs e Cripto) em uma única carteira, sem perder precisão nem extensibilidade.
 
-## ✨ Características Principais
+O desafio central foi projetar uma camada de domínio puramente polimórfica, onde cada ativo adere a um contrato único de cálculo de retorno. Isso permite adicionar novos indexadores ou tipos de ativos **sem modificar o núcleo do sistema** — aplicação prática de OOP avançado, Strategy Pattern e do Princípio Aberto/Fechado (OCP).
 
-- **Arquitetura em Camadas:** Pasta `domain/` isolada, sem dependências externas.
-- **Hierarquia de Ativos:** Implementação polimórfica abrangendo CDB, Tesouro Direto, Ações (Nacionais/Internacionais), FIIs e Cripto.
-- **Cálculo de Rentabilidade:** Uso de *Strategy Pattern* para indexadores (CDI, IPCA, Selic, Prefixado).
-- **Precisão Financeira:** Uso rigoroso de `Decimal` para evitar erros de arredondamento.
-- **Gestão de Posições:** Cálculo dinâmico de preço médio e quantidade baseado em histórico cronológico de transações.
-- **Injeção de Dependência:** Fontes de preço (`PriceSource`) injetadas via Protocolos, facilitando testes e extensibilidade.
+> 💡 Projeto construído do zero como exercício de arquitetura de software, com foco em separação estrita entre domínio e infraestrutura. O domínio financeiro foi escolhido por exigir regras de negócio rigorosas (precisão decimal, processamento cronológico de transações), tornando o desafio mais interessante do que um CRUD comum.
+
+---
 
 ## 🛠️ Stack Tecnológica
 
-| Categoria | Tecnologia |
-|---|---|
-| **API Framework** | FastAPI + Uvicorn |
-| **Persistência** | PostgreSQL + SQLAlchemy 2.0 + Alembic |
-| **Validação** | Pydantic v2 + pydantic-settings |
-| **Segurança** | JWT (`python-jose` + `pwdlib`) |
-| **Testes** | pytest + httpx |
-| **Linguagem** | Python 3.13 |
+| Camada | Tecnologia | Por que foi escolhida |
+|--------|-----------|----------------------|
+| **API** | FastAPI + Uvicorn | Geração automática de docs e tipagem nativa via Pydantic |
+| **Persistência** | PostgreSQL + SQLAlchemy 2.0 + Alembic | ORM moderno com tipagem e migrations versionadas |
+| **Validação** | Pydantic v2 | Validação de dados robusta e integração nativa com FastAPI |
+| **Segurança** | python-jose + pwdlib | JWT stateless para autenticação (em desenvolvimento) |
+| **Testes** | pytest + httpx | Testes unitários e de integração com cliente HTTP |
+| **Infra** | Docker + Docker Compose | Ambiente reproduzível em qualquer máquina |
 
 ---
 
-## 📁 Estrutura e Arquitetura
+## 🏗️ Arquitetura
 
-O projeto segue a regra de ouro: **A camada de domínio nunca importa nada de infraestrutura.**
+O projeto segue a **regra de ouro da Arquitetura Limpa**: a camada de domínio **nunca** importa nada de infraestrutura — é o inverso: `app/` depende de `domain/`, nunca ao contrário.
 
-```text
-app/
-├── main.py               ← Ponto de entrada da API
-├── database.py           ← Conexão com o banco
-├── auth/                 ← Login, JWT e dependências
-├── domain/               ← Lógica de Negócio (Python Puro)
-│   ├── assets/           ← Hierarquia de Ativos e Strategy
-│   ├── portfolio/        ← Transaction, Position e Portfolio
-│   ├── strategies/       ← Registro de estratégias de rentabilidade
-│   └── protocols.py      ← Contratos (PriceSource, ReturnStrategy)
-├── models/               ← Tabelas SQLAlchemy
-├── schemas/              ← Validação Pydantic
-└── routers/              ← Endpoints FastAPI
+```
+fintrack/
+├── domain/                 ← 🧠 Lógica de Negócio (Python puro)
+│   ├── assets/              # Hierarquia polimórfica de ativos
+│   ├── portfolio/            # Transaction, Position e Portfolio
+│   ├── strategies/           # Cálculo de rentabilidade por indexador
+│   └── protocols.py          # Contratos (PriceSource, ReturnStrategy)
+│
+├── app/                     ← 🌐 Camada de Infraestrutura
+│   ├── main.py               # Ponto de entrada da API
+│   ├── config.py             # Settings via pydantic-settings
+│   ├── database.py           # Engine, Session e Base (SQLAlchemy 2.0)
+│   ├── dependencies.py       # Injeção de dependências FastAPI
+│   ├── models/                # Tabelas com Joined Table Inheritance
+│   └── schemas/               # Validação Pydantic (Create/Read)
+│
+├── alembic/                 # Migrations versionadas
+├── tests/                    # 🧪 114 testes unitários
+├── docker-compose.yml
+├── alembic.ini
+└── .env.example
 ```
 
----
+### 🌳 Hierarquia de Domínio
 
-## 🌳 Domínio e Polimorfismo
-
-### Hierarquia de Ativos
-A estrutura de classes permite tratar qualquer ativo de forma genérica:
-```text
+```
 Asset (ABC)
-├── FixedIncome (ABC) -> CDB, GovernmentBond
-└── VariableIncome (ABC) -> Stock, RealEstateFund, Cryptocurrency
+├── FixedIncome (ABC)
+│   ├── CDB
+│   └── GovernmentBond
+└── VariableIncome (ABC)
+    ├── Stock (ABC)
+    │   ├── NationalStock
+    │   └── InternationalStock
+    ├── RealEstateFund
+    └── Cryptocurrency
 ```
 
-### Contrato Unificado
-Todos os ativos e estratégias seguem a mesma assinatura, garantindo o Princípio de Substituição de Liskov (LSP):
-```python
-def calculate_return(self, context: ReturnContext) -> Decimal:
-    ...
-```
+Essa hierarquia é replicada na camada de persistência via **Joined Table Inheritance** (SQLAlchemy 2.0): cada classe que adiciona um campo próprio ganha uma tabela própria, ligada por chave estrangeira à tabela pai imediata, preservando o polimorfismo do domínio também no banco.
 
 ---
 
 ## 🧠 Decisões de Engenharia
 
 | Decisão | Problema que resolve |
-|---|---|
-| **Strategy Pattern** | Isola a fórmula de cada indexador, permitindo novos cálculos sem tocar nos ativos. |
-| **Factory/Registry** | Garante que o ativo use a estratégia correta para seu indexador automaticamente. |
+|---------|---------------------|
+| **Strategy Pattern** | Isola a fórmula de cada indexador. Novo cálculo = nova classe, sem tocar nos ativos existentes. |
+| **Factory/Registry** | Garante que cada ativo use a estratégia correta para seu indexador automaticamente. |
 | **Template Method** | Centraliza validações comuns em `VariableIncome`, evitando duplicação nas subclasses. |
-| **Position Calculada** | Preço médio e quantidade são derivados das transações, eliminando riscos de dessincronização. |
-| **Indexação por Ticker** | Evita bugs de identidade de objeto ao gerenciar posições em carteira. |
-| **PriceSource via Protocol** | Permite trocar fontes de preço (API Real vs Mock) sem recriar objetos da carteira. |
-| **Enums em Minúsculo** | Garante compatibilidade com serialização JSON e frontends (case-sensitive). |
+| **Position calculada em memória** | Preço médio e quantidade são derivados do histórico de transações — elimina risco de dessincronização. Não vira tabela própria: é recalculada a partir da lista de transações, reaproveitando a `Position` do domínio já testada. |
+| **PriceSource via Protocol** | Permite trocar fontes de preço (API real vs. mock) sem acoplar o domínio a uma implementação concreta. |
+| **IDs como UUID** | Identificadores não previsíveis, consistentes entre domínio e banco. |
+| **Joined Table Inheritance** | Mapeia a hierarquia polimórfica de `Asset` sem colunas `NULL` sobrando (Single Table) nem duplicação de campos comuns (Concrete Table). |
 
 ---
 
 ## 💻 Exemplo de Uso
 
-A camada de domínio é totalmente funcional de forma independente:
+A camada de domínio é totalmente funcional e testável de forma independente — sem banco de dados, sem servidor HTTP:
 
 ```python
 from decimal import Decimal
-from domain.assets.variable_income.stock.national_stock import NationalStock
+from datetime import date
+from domain.assets.variable_income import NationalStock
 from domain.portfolio.portfolio import Portfolio
 
 # Configuração
-petr4 = NationalStock(name="Petrobras", ticker="PETR4", current_price=Decimal("35.50"))
+petr4 = NationalStock(
+    name="Petrobras",
+    ticker="PETR4",
+    current_price=Decimal("35.50")
+)
 portfolio = Portfolio(wallet_id="user-123")
 
 # Operação
-portfolio.buy(asset=petr4, quantity=Decimal("100"), price=Decimal("30.00"), buy_date=date(2026, 1, 5))
+portfolio.buy(
+    asset=petr4,
+    quantity=Decimal("100"),
+    price=Decimal("30.00"),
+    buy_date=date(2026, 1, 5)
+)
 
 # Resultados
-print(portfolio.positions["PETR4"].average_price) # 30.00
-print(portfolio.get_total_pnl(MyPriceSource()))   # Lucro baseado em mercado
+print(portfolio.positions["PETR4"].average_price)  # 30.00
+print(portfolio.get_total_pnl(MyPriceSource()))    # Lucro baseado em mercado
 ```
 
 ---
 
-## 🗺️ Roadmap de Endpoints
+## ✅ Testes
 
-### Autenticação
-- `POST /auth/register`
-- `POST /auth/login`
+```bash
+# Rodar todos os testes
+pytest
 
-### Gestão de Carteiras
-- `GET  /carteiras/`
-- `POST /carteiras/`
-- `GET  /carteiras/{id}/resumo`
-- `POST /carteiras/{id}/comprar`
-- `POST /carteiras/{id}/vender`
+# Com cobertura
+pytest --cov=domain --cov=app --cov-report=html
 
-### Ativos e Alertas
-- `GET  /ativos/`
-- `POST /alertas/`
+# Verbose
+pytest -v
+```
 
----
-
-## ✅ Status e Testes
-
-- [x] **Etapa 1 — Ativos:** Concluída (Polimorfismo, Strategy, Fisher).
-- [x] **Etapa 2 — Carteira:** Concluída (Transactions, Position, Portfolio).
-- [ ] **Etapa 3 — Persistência:** Em planejamento (SQLAlchemy + Alembic).
-- [ ] **Etapa 4 — Autenticação:** JWT.
-- [ ] **Etapa 5 — API:** Endpoints finais.
-
-**Qualidade:** Suíte de **110 testes unitários** com 100% de sucesso, cobrindo regras de negócio complexas como processamento cronológico de preço médio e proteção contra saldo insuficiente.
+**Resultado atual:** 114 testes unitários com **100% de aprovação**, cobrindo:
+- Processamento cronológico de preço médio (compras e vendas intercaladas)
+- Proteção contra saldo insuficiente
+- Cálculo de rentabilidade por indexador (CDI, IPCA, Selic, Prefixado)
+- Hierarquia polimórfica de ativos e sincronização de estratégia após troca de indexador
 
 ---
 
 ## 🚀 Como Executar
 
-1. Clone o repositório.
-2. Configure o `.env` (Postgres).
-3. `docker compose up --build`.
+### Pré-requisitos
+- [Docker](https://docs.docker.com/get-docker/) e Docker Compose
+- [Git](https://git-scm.com/)
 
-Acesse em `http://localhost:8000`.
+### Passo a passo
+
+```bash
+# 1. Clone o repositório
+git clone https://github.com/Victor-TelesF/fintrack.git
+cd fintrack
+
+# 2. Configure as variáveis de ambiente
+cp .env.example .env
+# Edite o .env com suas credenciais do PostgreSQL
+
+# 3. Suba a aplicação com Docker
+docker compose up --build
+
+# 4. Execute as migrations (em outro terminal)
+docker compose exec web alembic upgrade head
+
+# 5. Acesse a API
+# API:  http://localhost:8000
+# Docs: http://localhost:8000/docs
+```
+
+### Variáveis de ambiente (.env)
+
+O projeto usa `pydantic-settings` para ler a configuração — veja `.env.example` para o modelo completo:
+
+```env
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=changeme
+POSTGRES_HOST=db
+POSTGRES_PORT=5432
+POSTGRES_DB=fintrack
+
+SECRET_KEY=changeme
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+```
+
+---
+
+## 📋 Roadmap
+
+- [x] Modelagem polimórfica de ativos (CDB, Tesouro, Ações, FIIs, Cripto)
+- [x] Cálculo de rentabilidade com Strategy Pattern
+- [x] Gestão de carteiras, transações e posições (domínio puro)
+- [x] Persistência com SQLAlchemy 2.0 + Joined Table Inheritance
+- [x] Migrations com Alembic
+- [x] Schemas Pydantic (Create/Read)
+- [x] 114 testes unitários
+- [ ] Service layer (tradução entre persistência e domínio)
+- [ ] Autenticação JWT
+- [ ] Endpoints REST (`routers/`)
+- [ ] Alertas de preço (Observer Pattern)
+
+---
+
+## 🎓 O que Aprendi
+
+- Como isolar 100% a lógica de negócio de frameworks, tornando o domínio testável sem banco de dados ou servidor HTTP.
+- Aplicação prática do **Princípio Aberto/Fechado (OCP)**: adicionar um novo indexador ou tipo de ativo sem modificar código existente.
+- Mapeamento de herança polimórfica para banco relacional com **Joined Table Inheritance**.
+- Importância de `Decimal` sobre `float` em cálculos financeiros para evitar erros de arredondamento silenciosos.
+- Como projetar testes que validam regras de negócio complexas de forma isolada, incluindo regressões (ex: processamento cronológico de transações fora de ordem de inserção).
 
 ---
 
 ## 🤝 Créditos
 
-Desenvolvido por [@Victor_TelesF](https://github.com/Victor-TelesF). 
-O projeto conta com apoio técnico do **Claude (Anthropic)** como revisor de arquitetura e tutor de OOP, garantindo que as decisões de design sigam as melhores práticas de mercado.
+Desenvolvido por [@Victor_TelesF](https://github.com/Victor-TelesF).
 
 ---
 
-## Licença
+## 📝 Licença
 
-Distribuído sob a licença MIT. Veja `LICENSE` para mais informações.
+Distribuído sob a licença MIT. Veja [`LICENSE`](LICENSE) para mais informações.

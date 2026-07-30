@@ -12,9 +12,9 @@ from decimal import Decimal
 
 import pytest
 
-from app.domain.assets.asset import Asset
-from app.domain.assets.variable_income import NationalStock
-from app.domain.exceptions import InvalidValueError, InvalidPriceError
+from domain.assets.asset import Asset
+from domain.assets.variable_income import NationalStock
+from domain.exceptions import InvalidValueError, InvalidPriceError
 
 
 class TestAssetCannotBeInstantiatedDirectly:
