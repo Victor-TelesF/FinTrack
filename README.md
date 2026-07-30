@@ -124,9 +124,10 @@ def calculate_return(self, context: ReturnContext) -> Decimal:
 
 A camada de domínio é totalmente funcional de forma independente:
 
-```python
+\```python
 from decimal import Decimal
-from domain.assets.variable_income.stock.national_stock import NationalStock
+from datetime import date
+from domain.assets.variable_income import NationalStock
 from domain.portfolio.portfolio import Portfolio
 
 # Configuração
@@ -139,7 +140,7 @@ portfolio.buy(asset=petr4, quantity=Decimal("100"), price=Decimal("30.00"), buy_
 # Resultados
 print(portfolio.positions["PETR4"].average_price) # 30.00
 print(portfolio.get_total_pnl(MyPriceSource()))   # Lucro baseado em mercado
-```
+\```
 
 ---
 
@@ -166,11 +167,11 @@ print(portfolio.get_total_pnl(MyPriceSource()))   # Lucro baseado em mercado
 
 - [x] **Etapa 1 — Ativos:** Concluída (Polimorfismo, Strategy, Fisher).
 - [x] **Etapa 2 — Carteira:** Concluída (Transactions, Position, Portfolio).
-- [ ] **Etapa 3 — Persistência:** 🚧 Em andamento — `config.py`, `database.py` e `dependencies.py` concluídos; modelos SQLAlchemy da hierarquia de ativos (Joined Table Inheritance) em progresso.
+- [x] **Etapa 3 — Persistência:** Concluída (Models SQLAlchemy com Joined Table Inheritance, Alembic, Schemas Pydantic).
 - [ ] **Etapa 4 — Autenticação:** JWT.
-- [ ] **Etapa 5 — API:** Endpoints finais.
+- [ ] **Etapa 5 — API:** Service layer e endpoints finais.
 
-**Qualidade:** Suíte de **110 testes unitários** com 100% de sucesso, cobrindo regras de negócio complexas como processamento cronológico de preço médio e proteção contra saldo insuficiente.
+**Qualidade:** Suíte de **114 testes unitários** com 100% de sucesso, cobrindo regras de negócio complexas como processamento cronológico de preço médio e proteção contra saldo insuficiente.
 
 ---
 
