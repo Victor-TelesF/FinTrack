@@ -13,7 +13,7 @@ import time
 import pytest
 
 from app.auth.token_handler import TokenHandler
-from app.exceptions import InvalidTokenError
+from app.errors.exceptions import InvalidTokenError
 
 
 @pytest.fixture

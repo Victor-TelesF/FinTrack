@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from jose import jwt, JWTError
-from ..exceptions import InvalidTokenError
+from ..errors.exceptions import InvalidTokenError
 
 class TokenHandler:
 
