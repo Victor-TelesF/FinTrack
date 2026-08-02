@@ -3,3 +3,4 @@ from .fixed_income_schema import CDBCreate,CDBRead,GovernmentBondCreate,Governme
 from .variable_income_schema import RealEstateFundCreate,RealEstateFundRead,NationalStockCreate,NationalStockRead,CryptocurrencyCreate,CryptocurrencyRead
 from .transaction_schema import TransactionCreate,TransactionRead
 from .user_schema import UserCreate, UserRead
+from .auth_schema import UserLogin, TokenRead
