@@ -125,6 +125,7 @@ celerybeat.pid
 
 # Environments
 .env
+.env.test
 .venv
 env/
 venv/
@@ -172,10 +173,6 @@ poetry.toml
 
 # LSP config files
 pyrightconfig.json
-
-# Meus arquivos locais de dados
-contatos_salvos/
-agenda.json
 
 # PostgreSQL
 *.sql
