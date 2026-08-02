@@ -13,7 +13,7 @@ class UserModel(Base):
     __tablename__ = "user"
 
     user_id: Mapped[UUID] = mapped_column(primary_key=True, index=True, default=uuid4)
-    user_name: Mapped[str] = mapped_column(String(50))
+    user_name: Mapped[str] = mapped_column(String(50), unique=True)
     hash_password: Mapped[str] = mapped_column(String(250))
     portfolios: Mapped[list["PortfolioModel"]] = relationship(back_populates="user")
     
