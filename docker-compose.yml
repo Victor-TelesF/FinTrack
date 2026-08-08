@@ -6,12 +6,11 @@ services:
       - "8000:8000"
     volumes:
       - .:/app
-    environment:
-      POSTGRES_HOST: db
+    env_file:
+      - .env
     depends_on:
       db:
         condition: service_healthy
-
   db:
     image: postgres:15-alpine
     ports:
@@ -23,7 +22,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
