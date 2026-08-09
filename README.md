@@ -1,3 +1,4 @@
+markdown
 <p align="center">
 <img src="https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=white" />
   <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" />
@@ -33,7 +34,7 @@ O desafio central foi projetar uma camada de domínio puramente polimórfica, on
 | **API** | FastAPI + Uvicorn | Geração automática de docs e tipagem nativa via Pydantic |
 | **Persistência** | PostgreSQL + SQLAlchemy 2.0 + Alembic | ORM moderno com tipagem e migrations versionadas |
 | **Validação** | Pydantic v2 | Validação de dados robusta e integração nativa com FastAPI |
-| **Segurança** | python-jose + pwdlib | JWT stateless para autenticação (em desenvolvimento) |
+| **Segurança** | python-jose + pwdlib | Autenticação JWT stateless: hash de senha, emissão e validação de token |
 | **Testes** | pytest + httpx | Testes unitários e de integração com cliente HTTP |
 | **Infra** | Docker + Docker Compose | Ambiente reproduzível em qualquer máquina |
 
@@ -43,43 +44,45 @@ O desafio central foi projetar uma camada de domínio puramente polimórfica, on
 
 O projeto segue a **regra de ouro da Arquitetura Limpa**: a camada de domínio **nunca** importa nada de infraestrutura — é o inverso: `app/` depende de `domain/`, nunca ao contrário.
 
-```
 fintrack/
-├── domain/                 ← 🧠 Lógica de Negócio (Python puro)
-│   ├── assets/              # Hierarquia polimórfica de ativos
-│   ├── portfolio/            # Transaction, Position e Portfolio
-│   ├── strategies/           # Cálculo de rentabilidade por indexador
-│   └── protocols.py          # Contratos (PriceSource, ReturnStrategy)
+├── domain/ ← 🧠 Lógica de Negócio (Python puro)
+│ ├── assets/ # Hierarquia polimórfica de ativos
+│ ├── portfolio/ # Transaction, Position e Portfolio
+│ ├── strategies/ # Cálculo de rentabilidade por indexador
+│ └── protocols.py # Contratos (PriceSource, ReturnStrategy)
 │
-├── app/                     ← 🌐 Camada de Infraestrutura
-│   ├── main.py               # Ponto de entrada da API
-│   ├── config.py             # Settings via pydantic-settings
-│   ├── database.py           # Engine, Session e Base (SQLAlchemy 2.0)
-│   ├── dependencies.py       # Injeção de dependências FastAPI
-│   ├── models/                # Tabelas com Joined Table Inheritance
-│   └── schemas/               # Validação Pydantic (Create/Read)
+├── app/ ← 🌐 Camada de Infraestrutura
+│ ├── main.py # Ponto de entrada da API
+│ ├── config.py # Settings via pydantic-settings
+│ ├── database.py # Engine, Session e Base (SQLAlchemy 2.0)
+│ ├── dependencies.py # Injeção de dependências FastAPI
+│ ├── auth/ # PasswordHandler e TokenHandler (JWT)
+│ ├── service/ # Regras de aplicação (AuthService)
+│ ├── errors/ # Exceções de aplicação e exception handlers
+│ ├── models/ # Tabelas com Joined Table Inheritance
+│ ├── schemas/ # Validação Pydantic (Create/Read)
+│ └── routers/ # Endpoints da API
 │
-├── alembic/                 # Migrations versionadas
-├── tests/                    # 🧪 114 testes unitários
+├── alembic/ # Migrations versionadas
+├── tests/ # 🧪 132 testes unitários e de integração
 ├── docker-compose.yml
 ├── alembic.ini
 └── .env.example
-```
+
 
 ### 🌳 Hierarquia de Domínio
 
-```
 Asset (ABC)
 ├── FixedIncome (ABC)
-│   ├── CDB
-│   └── GovernmentBond
+│ ├── CDB
+│ └── GovernmentBond
 └── VariableIncome (ABC)
-    ├── Stock (ABC)
-    │   ├── NationalStock
-    │   └── InternationalStock
-    ├── RealEstateFund
-    └── Cryptocurrency
-```
+├── Stock (ABC)
+│ ├── NationalStock
+│ └── InternationalStock
+├── RealEstateFund
+└── Cryptocurrency
+
 
 Essa hierarquia é replicada na camada de persistência via **Joined Table Inheritance** (SQLAlchemy 2.0): cada classe que adiciona um campo próprio ganha uma tabela própria, ligada por chave estrangeira à tabela pai imediata, preservando o polimorfismo do domínio também no banco.
 
@@ -96,6 +99,7 @@ Essa hierarquia é replicada na camada de persistência via **Joined Table Inher
 | **PriceSource via Protocol** | Permite trocar fontes de preço (API real vs. mock) sem acoplar o domínio a uma implementação concreta. |
 | **IDs como UUID** | Identificadores não previsíveis, consistentes entre domínio e banco. |
 | **Joined Table Inheritance** | Mapeia a hierarquia polimórfica de `Asset` sem colunas `NULL` sobrando (Single Table) nem duplicação de campos comuns (Concrete Table). |
+| **JWT stateless via `get_current_user`** | Protege rotas sem consultar estado de sessão a cada request — a validação (assinatura + expiração) é puramente criptográfica; o usuário só é buscado no banco depois de o token já ser confirmado válido. |
 
 ---
 
@@ -145,11 +149,12 @@ pytest --cov=domain --cov=app --cov-report=html
 pytest -v
 ```
 
-**Resultado atual:** 114 testes unitários com **100% de aprovação**, cobrindo:
+**Resultado atual:** 132 testes com **100% de aprovação**, cobrindo:
 - Processamento cronológico de preço médio (compras e vendas intercaladas)
 - Proteção contra saldo insuficiente
 - Cálculo de rentabilidade por indexador (CDI, IPCA, Selic, Prefixado)
 - Hierarquia polimórfica de ativos e sincronização de estratégia após troca de indexador
+- Autenticação: hash/verificação de senha, emissão e validação de token JWT, registro e login via API, e resolução de usuário autenticado a partir do token (`get_auth_user`)
 
 ---
 
@@ -207,10 +212,11 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 - [x] Persistência com SQLAlchemy 2.0 + Joined Table Inheritance
 - [x] Migrations com Alembic
 - [x] Schemas Pydantic (Create/Read)
-- [x] 114 testes unitários
-- [ ] Service layer (tradução entre persistência e domínio)
-- [ ] Autenticação JWT
-- [ ] Endpoints REST (`routers/`)
+- [x] Autenticação JWT (registro, login, dependência de usuário autenticado)
+- [x] 132 testes unitários e de integração
+- [ ] Service layer completo (tradução entre persistência e domínio para ativos/transações)
+- [ ] Endpoints REST de ativos e transações (`routers/`)
+- [ ] Refresh token (access token curto + revogação de sessão)
 - [ ] Alertas de preço (Observer Pattern)
 
 ---
@@ -222,6 +228,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 - Mapeamento de herança polimórfica para banco relacional com **Joined Table Inheritance**.
 - Importância de `Decimal` sobre `float` em cálculos financeiros para evitar erros de arredondamento silenciosos.
 - Como projetar testes que validam regras de negócio complexas de forma isolada, incluindo regressões (ex: processamento cronológico de transações fora de ordem de inserção).
+- Como compor dependências do FastAPI em cadeia (`Depends` encadeado) para autenticação JWT stateless, mantendo a lógica de negócio (consulta ao banco) fora da camada de wiring.
 
 ---
 
