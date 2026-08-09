@@ -1,5 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from uuid import uuid4, UUID
 from ..models import UserModel, PortfolioModel
 from ..auth import PasswordHandler, TokenHandler
@@ -32,7 +33,11 @@ class AuthService:
         )
 
         self._db.add(user)
-        self._db.commit()
+        try:
+            self._db.commit()
+        except IntegrityError:
+            self._db.rollback()
+            raise UserAlreadyExistsError()
         self._db.refresh(user)
 
         return user
