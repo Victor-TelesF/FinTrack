@@ -1,6 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from uuid import uuid4
+from uuid import uuid4, UUID
 from ..models import UserModel, PortfolioModel
 from ..auth import PasswordHandler, TokenHandler
 from ..schemas.user_schema import UserCreate
@@ -50,3 +50,14 @@ class AuthService:
         access_token = self._token_handler.create_token(user_id=str(user.user_id))
 
         return TokenRead(access_token=access_token, token_type="bearer")
+
+    def get_auth_user(self, token: str) -> UserModel:
+
+        user = self._token_handler.decode_token(token)
+        stmt = select(UserModel).where(UserModel.user_id == UUID(user))
+        user_verification = self._db.execute(stmt).scalar_one_or_none()
+
+        if not user_verification:
+            raise InvalidCredentialsError()
+
+        return user_verification
