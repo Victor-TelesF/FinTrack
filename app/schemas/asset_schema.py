@@ -23,6 +23,16 @@ class AssetBaseRead(BaseModel):
     current_price: Decimal
 
 
+class AssetCatalogRead(AssetBaseRead):
+    asset_type: str
+    rate: Decimal | None = None
+    maturity_date: date | None = None
+    fgc_covered: bool | None = None
+    liquidity_type: LiquidityType | None = None
+    index_type: IndexType | None = None
+    bond_index_type: BondIndexType | None = None
+
+
 class AdminAssetItem(BaseModel):
     type: Literal[
         "cdb", "government_bond", "national_stock", "international_stock",

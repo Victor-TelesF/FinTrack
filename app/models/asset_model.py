@@ -15,6 +15,10 @@ class AssetModel(Base):
     current_price: Mapped[Decimal] = mapped_column(Numeric(precision=18,scale=8))
     type_column: Mapped[str] = mapped_column(String(50))
 
+    @property
+    def asset_type(self) -> str:
+        return self.type_column
+
     __mapper_args__ = {
         "polymorphic_on": type_column,
         "polymorphic_identity": "asset"

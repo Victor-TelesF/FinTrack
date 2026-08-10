@@ -212,7 +212,11 @@ SECRET_KEY=replace-with-a-long-random-secret
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 ADMIN_KEY=replace-with-a-long-random-admin-key
+FRONTEND_ORIGINS=http://localhost:3000
 ```
+
+`FRONTEND_ORIGINS` aceita múltiplas origens separadas por vírgula, por exemplo:
+`http://localhost:3000,http://localhost:3001`.
 
 ---
 
@@ -248,6 +252,29 @@ ADMIN_KEY=replace-with-a-long-random-admin-key
 | `GET` | `/portfolios/summary` | JWT |
 
 Ativos são cadastrados ou atualizados exclusivamente pelo endpoint administrativo. O payload aceita uma lista mista de CDBs, títulos públicos, ações, FIIs e criptomoedas. O usuário comum apenas consulta o catálogo e registra operações usando o ticker.
+
+### Fluxo recomendado para o frontend
+
+1. Registre o usuário com `POST /auth/register`.
+2. Faça login com `POST /auth/login` e guarde o `access_token`.
+3. Envie `Authorization: Bearer <access_token>` nas rotas protegidas.
+4. Consulte `GET /assets` para carregar o catálogo e `GET /portfolios/summary` para o dashboard.
+5. Envie compras e vendas para `/portfolios/buy` e `/portfolios/sell`.
+
+Exemplo de compra:
+
+```json
+{
+  "ticker": "PETR4",
+  "quantity": "10",
+  "price": "35.50",
+  "transaction_date": "2026-08-01"
+}
+```
+
+As respostas financeiras usam strings decimais para evitar perda de precisão no JavaScript. O frontend deve converter esses valores apenas para formatação ou usar uma biblioteca decimal para novos cálculos.
+
+Erros seguem o formato `{ "detail": "mensagem" }`. Os casos principais são `401` para autenticação, `403` para a chave administrativa, `404` para recurso inexistente, `409` para conflito e `422` para payload ou operação inválida.
 
 ---
 
