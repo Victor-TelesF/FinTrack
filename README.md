@@ -44,44 +44,49 @@ O desafio central foi projetar uma camada de domínio puramente polimórfica, on
 
 O projeto segue a **regra de ouro da Arquitetura Limpa**: a camada de domínio **nunca** importa nada de infraestrutura — é o inverso: `app/` depende de `domain/`, nunca ao contrário.
 
+```text
 fintrack/
-├── domain/ ← 🧠 Lógica de Negócio (Python puro)
-│ ├── assets/ # Hierarquia polimórfica de ativos
-│ ├── portfolio/ # Transaction, Position e Portfolio
-│ ├── strategies/ # Cálculo de rentabilidade por indexador
-│ └── protocols.py # Contratos (PriceSource, ReturnStrategy)
-│
-├── app/ ← 🌐 Camada de Infraestrutura
-│ ├── main.py # Ponto de entrada da API
-│ ├── config.py # Settings via pydantic-settings
-│ ├── database.py # Engine, Session e Base (SQLAlchemy 2.0)
-│ ├── dependencies.py # Injeção de dependências FastAPI
-│ ├── auth/ # PasswordHandler e TokenHandler (JWT)
-│ ├── service/ # Regras de aplicação (AuthService)
-│ ├── errors/ # Exceções de aplicação e exception handlers
-│ ├── models/ # Tabelas com Joined Table Inheritance
-│ ├── schemas/ # Validação Pydantic (Create/Read)
-│ └── routers/ # Endpoints da API
-│
-├── alembic/ # Migrations versionadas
-├── tests/ # 🧪 132 testes unitários e de integração
+├── domain/                  # Lógica de negócio, Python puro
+│   ├── assets/              # Hierarquia polimórfica de ativos
+│   ├── portfolio/           # Transaction, Position e Portfolio
+│   ├── strategies/          # Cálculo por indexador
+│   └── protocols.py         # PriceSource e ReturnStrategy
+├── app/                     # Infraestrutura e camada HTTP
+│   ├── main.py              # Ponto de entrada da API
+│   ├── config.py            # Settings via pydantic-settings
+│   ├── database.py          # Engine, Session e Base
+│   ├── dependencies.py      # Injeção de dependências FastAPI
+│   ├── auth/                # PasswordHandler e TokenHandler
+│   ├── mappers/             # Conversão ORM <-> domínio
+│   ├── price_source.py      # Fonte de preços persistidos
+│   ├── service/             # Services da aplicação
+│   ├── errors/              # Exceções e handlers HTTP
+│   ├── models/              # Modelos SQLAlchemy
+│   ├── schemas/             # Contratos Pydantic
+│   └── routers/             # Endpoints da API
+├── alembic/                 # Migrations versionadas
+├── tests/                   # Testes unitários e de integração
 ├── docker-compose.yml
+├── Dockerfile
 ├── alembic.ini
 └── .env.example
+```
 
 
 ### 🌳 Hierarquia de Domínio
 
+```text
 Asset (ABC)
 ├── FixedIncome (ABC)
-│ ├── CDB
-│ └── GovernmentBond
+│   ├── CDB
+│   └── GovernmentBond
 └── VariableIncome (ABC)
-├── Stock (ABC)
-│ ├── NationalStock
-│ └── InternationalStock
-├── RealEstateFund
-└── Cryptocurrency
+    ├── Stock (ABC)
+    │   ├── NationalStock
+    │   └── InternationalStock
+    ├── RealEstateFund
+    └── Cryptocurrency
+```
 
 
 Essa hierarquia é replicada na camada de persistência via **Joined Table Inheritance** (SQLAlchemy 2.0): cada classe que adiciona um campo próprio ganha uma tabela própria, ligada por chave estrangeira à tabela pai imediata, preservando o polimorfismo do domínio também no banco.
@@ -131,7 +136,7 @@ portfolio.buy(
 
 # Resultados
 print(portfolio.positions["PETR4"].average_price)  # 30.00
-print(portfolio.get_total_pnl(MyPriceSource()))    # Lucro baseado em mercado
+# portfolio.get_total_pnl(price_source) calcula o lucro com uma PriceSource.
 ```
 
 ---
@@ -149,12 +154,14 @@ pytest --cov=domain --cov=app --cov-report=html
 pytest -v
 ```
 
-**Resultado atual:** 132 testes com **100% de aprovação**, cobrindo:
+**Resultado atual:** 156 testes com **100% de aprovação**, cobrindo:
 - Processamento cronológico de preço médio (compras e vendas intercaladas)
 - Proteção contra saldo insuficiente
 - Cálculo de rentabilidade por indexador (CDI, IPCA, Selic, Prefixado)
 - Hierarquia polimórfica de ativos e sincronização de estratégia após troca de indexador
 - Autenticação: hash/verificação de senha, emissão e validação de token JWT, registro e login via API, e resolução de usuário autenticado a partir do token (`get_auth_user`)
+- Catálogo de ativos com upsert administrativo e leitura autenticada
+- Compra, venda, histórico, posições, preço médio, P&L e resumo da carteira
 
 ---
 
@@ -176,14 +183,18 @@ cp .env.example .env
 # Edite o .env com suas credenciais do PostgreSQL
 
 # 3. Suba a aplicação com Docker
+# O serviço web executa as migrations antes de iniciar a API.
 docker compose up --build
 
-# 4. Execute as migrations (em outro terminal)
-docker compose exec web alembic upgrade head
-
-# 5. Acesse a API
+# 4. Acesse a API
 # API:  http://localhost:8000
 # Docs: http://localhost:8000/docs
+```
+
+Para aplicar migrations manualmente depois de uma alteração:
+
+```bash
+docker compose exec web alembic upgrade head
 ```
 
 ### Variáveis de ambiente (.env)
@@ -192,14 +203,15 @@ O projeto usa `pydantic-settings` para ler a configuração — veja `.env.examp
 
 ```env
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=changeme
+POSTGRES_PASSWORD=replace-with-a-strong-password
 POSTGRES_HOST=db
 POSTGRES_PORT=5432
 POSTGRES_DB=fintrack
 
-SECRET_KEY=changeme
+SECRET_KEY=replace-with-a-long-random-secret
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
+ADMIN_KEY=replace-with-a-long-random-admin-key
 ```
 
 ---
@@ -213,11 +225,29 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 - [x] Migrations com Alembic
 - [x] Schemas Pydantic (Create/Read)
 - [x] Autenticação JWT (registro, login, dependência de usuário autenticado)
-- [x] 132 testes unitários e de integração
-- [ ] Service layer completo (tradução entre persistência e domínio para ativos/transações)
-- [ ] Endpoints REST de ativos e transações (`routers/`)
+- [x] Service layer e mapeamento ORM ↔ domínio
+- [x] Endpoints REST de ativos, carteiras, transações, posições e resumo
+- [x] 156 testes unitários e de integração
 - [ ] Refresh token (access token curto + revogação de sessão)
 - [ ] Alertas de preço (Observer Pattern)
+
+### Endpoints principais
+
+| Método | Endpoint | Autenticação |
+|--------|----------|--------------|
+| `POST` | `/auth/register` | Não |
+| `POST` | `/auth/login` | Não |
+| `GET` | `/assets` | JWT |
+| `GET` | `/assets/{asset_id}` | JWT |
+| `POST` | `/admin/assets` | `X-Admin-Key` |
+| `GET` | `/portfolios` | JWT |
+| `POST` | `/portfolios/buy` | JWT |
+| `POST` | `/portfolios/sell` | JWT |
+| `GET` | `/portfolios/transactions` | JWT |
+| `GET` | `/portfolios/positions` | JWT |
+| `GET` | `/portfolios/summary` | JWT |
+
+Ativos são cadastrados ou atualizados exclusivamente pelo endpoint administrativo. O payload aceita uma lista mista de CDBs, títulos públicos, ações, FIIs e criptomoedas. O usuário comum apenas consulta o catálogo e registra operações usando o ticker.
 
 ---
 

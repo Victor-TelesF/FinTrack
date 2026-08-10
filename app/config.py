@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
+    ADMIN_KEY: str = ""
 
     @property
     def database_url(self) -> str:

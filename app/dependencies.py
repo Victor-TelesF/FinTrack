@@ -5,6 +5,8 @@ from .database import SessionLocal
 from .config import settings
 from .auth import PasswordHandler, TokenHandler
 from .service import AuthService
+from .service.asset_service import AssetService
+from .service.portfolio_service import PortfolioService
 from .models import UserModel
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
@@ -32,6 +34,14 @@ def get_auth_service(
     token_handler: TokenHandler = Depends(get_token_handler),
 ) -> AuthService:
     return AuthService(db, password_handler, token_handler)
+
+
+def get_asset_service(db: Session = Depends(get_db)) -> AssetService:
+    return AssetService(db)
+
+
+def get_portfolio_service(db: Session = Depends(get_db)) -> PortfolioService:
+    return PortfolioService(db)
 
 def get_current_user(user_credential: AuthService = Depends(get_auth_service), 
                      token: str = Depends(oauth2_scheme)) -> UserModel:
