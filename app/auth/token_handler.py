@@ -24,4 +24,8 @@ class TokenHandler:
         except JWTError:
             raise InvalidTokenError()
 
-        return payload["sub"]
+        subject = payload.get("sub")
+        if not isinstance(subject, str) or not subject:
+            raise InvalidTokenError()
+
+        return subject
