@@ -26,13 +26,14 @@ class Transaction:
 
     def __init__(self, asset: Asset, quantity: Decimal,
                 price: Decimal, transaction_type: TransactionType,
-                transaction_date: date):
+                transaction_date: date, transaction_sequence: int | None = None):
         self._id_transaction = uuid4()
         self.asset = asset
         self.quantity = quantity
         self.price = price
         self.transaction_type = transaction_type
         self.transaction_date = transaction_date
+        self.transaction_sequence = transaction_sequence
 
     @property
     def id_transaction(self):
@@ -87,6 +88,16 @@ class Transaction:
             date: The date of the transaction.
         """
         return self._transaction_date
+
+    @property
+    def transaction_sequence(self) -> int | None:
+        return self._transaction_sequence
+
+    @transaction_sequence.setter
+    def transaction_sequence(self, value: int | None) -> None:
+        if value is not None and (not isinstance(value, int) or value <= 0):
+            raise InvalidValueError("Sequência da transação deve ser um inteiro positivo")
+        self._transaction_sequence = value
     
     @asset.setter
     def asset(self, value) -> None:

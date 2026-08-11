@@ -69,6 +69,40 @@ def test_buy_sell_and_list_transactions(client, monkeypatch):
     assert transactions.json()[1]["transaction_type"] == "sell"
 
 
+def test_positions_after_same_day_sell(client, monkeypatch):
+    headers = register_and_login(client, "same_day_position_user")
+    create_stock(client, headers, monkeypatch)
+
+    for quantity, price in (("10", "18.50"), ("5", "19.00")):
+        response = client.post(
+            "/portfolios/buy",
+            json={
+                "ticker": "ABCD3",
+                "quantity": quantity,
+                "price": price,
+                "transaction_date": "2026-01-05",
+            },
+            headers=headers,
+        )
+        assert response.status_code == 200, response.text
+
+    sell = client.post(
+        "/portfolios/sell",
+        json={
+            "ticker": "ABCD3",
+            "quantity": "4",
+            "price": "22.00",
+            "transaction_date": "2026-01-05",
+        },
+        headers=headers,
+    )
+    positions = client.get("/portfolios/positions", headers=headers)
+
+    assert sell.status_code == 200, sell.text
+    assert positions.status_code == 200, positions.text
+    assert positions.json()[0]["quantity"] == "11.00000000"
+
+
 def test_sell_above_position_returns_validation_error(client, monkeypatch):
     headers = register_and_login(client, "insufficient_user")
     create_stock(client, headers, monkeypatch)

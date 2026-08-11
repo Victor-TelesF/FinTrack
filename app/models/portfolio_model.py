@@ -1,4 +1,4 @@
-from sqlalchemy import String, Numeric, Date, DateTime, Enum, ForeignKey, func
+from sqlalchemy import BigInteger, String, Numeric, Date, DateTime, Enum, ForeignKey, Sequence, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from decimal import Decimal
 from typing import TYPE_CHECKING
@@ -6,6 +6,8 @@ from datetime import date, datetime
 from ..database import Base
 from uuid import UUID, uuid4
 from domain.enums import TransactionType
+
+transaction_order_sequence = Sequence("transaction_order_seq")
 
 if TYPE_CHECKING:
     from .user_model import UserModel
@@ -17,6 +19,13 @@ class TransactionModel(Base):
     __tablename__ = "transaction"
 
     id_transaction: Mapped[UUID] = mapped_column(primary_key=True, index=True,default=uuid4)
+    transaction_sequence: Mapped[int] = mapped_column(
+        BigInteger,
+        transaction_order_sequence,
+        server_default=transaction_order_sequence.next_value(),
+        nullable=False,
+        unique=True,
+    )
     asset_id: Mapped[UUID] = mapped_column(ForeignKey("asset.id", ondelete="RESTRICT"))
     asset: Mapped["AssetModel"] = relationship()
     id_portfolio: Mapped[UUID] = mapped_column(ForeignKey("portfolio.id_portfolio", ondelete="RESTRICT"))

@@ -60,7 +60,14 @@ class Portfolio:
         """
         return self._positions.copy()
     
-    def buy(self, asset: Asset, quantity: Decimal, price: Decimal, buy_date: date) -> Transaction:
+    def buy(
+        self,
+        asset: Asset,
+        quantity: Decimal,
+        price: Decimal,
+        buy_date: date,
+        transaction_sequence: int | None = None,
+    ) -> Transaction:
         """Execute a buy transaction and update the portfolio position.
 
         Args:
@@ -72,7 +79,14 @@ class Portfolio:
         Returns:
             Transaction: The executed buy transaction.
         """
-        transaction = Transaction(asset, quantity, price, TransactionType.BUY, buy_date)
+        transaction = Transaction(
+            asset,
+            quantity,
+            price,
+            TransactionType.BUY,
+            buy_date,
+            transaction_sequence,
+        )
         if asset.ticker not in self._positions.keys():
 
             position = Position(asset)
@@ -84,7 +98,14 @@ class Portfolio:
 
         return transaction
     
-    def sell(self, asset: Asset, quantity: Decimal, price: Decimal, sell_date: date) -> Transaction:
+    def sell(
+        self,
+        asset: Asset,
+        quantity: Decimal,
+        price: Decimal,
+        sell_date: date,
+        transaction_sequence: int | None = None,
+    ) -> Transaction:
         """Execute a sell transaction and update the portfolio position.
 
         Args:
@@ -99,7 +120,14 @@ class Portfolio:
         Raises:
             AssetNotFoundError: If the asset ticker is not present in the portfolio.
         """
-        transaction = Transaction(asset,quantity, price, TransactionType.SELL, sell_date)
+        transaction = Transaction(
+            asset,
+            quantity,
+            price,
+            TransactionType.SELL,
+            sell_date,
+            transaction_sequence,
+        )
 
         if asset.ticker not in self._positions.keys():
             raise AssetNotFoundError("Esse ticker nunca foi comprado nessa carteira")

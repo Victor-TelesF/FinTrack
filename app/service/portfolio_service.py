@@ -34,8 +34,7 @@ class PortfolioService:
             .where(TransactionModel.id_portfolio == portfolio_id)
             .order_by(
                 TransactionModel.transaction_date,
-                TransactionModel.created_at,
-                TransactionModel.id_transaction,
+                TransactionModel.transaction_sequence,
             )
         )
         return list(self._db.execute(statement).scalars().all())
@@ -166,8 +165,7 @@ class PortfolioService:
             portfolio_model.transactions,
             key=lambda transaction: (
                 transaction.transaction_date,
-                transaction.created_at,
-                transaction.id_transaction,
+                transaction.transaction_sequence,
             ),
         )
         for transaction in transactions:
@@ -176,7 +174,19 @@ class PortfolioService:
                 AssetMapper.to_domain(transaction.asset),
             )
             if transaction.transaction_type is TransactionType.BUY:
-                portfolio.buy(asset, transaction.quantity, transaction.price, transaction.transaction_date)
+                portfolio.buy(
+                    asset,
+                    transaction.quantity,
+                    transaction.price,
+                    transaction.transaction_date,
+                    transaction.transaction_sequence,
+                )
             else:
-                portfolio.sell(asset, transaction.quantity, transaction.price, transaction.transaction_date)
+                portfolio.sell(
+                    asset,
+                    transaction.quantity,
+                    transaction.price,
+                    transaction.transaction_date,
+                    transaction.transaction_sequence,
+                )
         return portfolio
