@@ -7,6 +7,7 @@ from app.config import Settings
 from app.database import Base
 from app.main import app
 from app.dependencies import get_db
+from app.routers.auth_router import reset_rate_limit_state
 
 settings_teste = Settings(_env_file=".env.test")
 engine_teste = create_engine(settings_teste.database_url)
@@ -33,4 +34,5 @@ def setup_database():
 
 @pytest.fixture
 def client(setup_database):
+    reset_rate_limit_state()
     return TestClient(app)

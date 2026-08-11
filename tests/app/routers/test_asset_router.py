@@ -69,6 +69,16 @@ def test_admin_asset_upsert_requires_admin_key(client):
     assert response.status_code == 403
 
 
+def test_admin_asset_upsert_with_invalid_key_returns_forbidden(client):
+    response = client.post(
+        "/admin/assets",
+        json={"assets": []},
+        headers={"X-Admin-Key": "invalid-key"},
+    )
+
+    assert response.status_code == 403
+
+
 def test_get_unknown_asset_returns_not_found(client):
     headers = register_and_login(client)
 

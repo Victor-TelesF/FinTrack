@@ -154,7 +154,7 @@ pytest --cov=domain --cov=app --cov-report=html
 pytest -v
 ```
 
-**Resultado atual:** 156 testes com **100% de aprovação**, cobrindo:
+**Resultado atual:** 167 testes com **100% de aprovação**, cobrindo:
 - Processamento cronológico de preço médio (compras e vendas intercaladas)
 - Proteção contra saldo insuficiente
 - Cálculo de rentabilidade por indexador (CDI, IPCA, Selic, Prefixado)
@@ -162,6 +162,8 @@ pytest -v
 - Autenticação: hash/verificação de senha, emissão e validação de token JWT, registro e login via API, e resolução de usuário autenticado a partir do token (`get_auth_user`)
 - Catálogo de ativos com upsert administrativo e leitura autenticada
 - Compra, venda, histórico, posições, preço médio, P&L e resumo da carteira
+- Rate limit de login está implementado por IP e não por username, com expurgo periódico de entradas antigas
+- Fixed income `rate` usa precisão `18,8` em banco e há migration Alembic para a coluna existente
 
 ---
 

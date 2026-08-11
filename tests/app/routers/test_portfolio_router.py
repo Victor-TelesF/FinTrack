@@ -130,6 +130,95 @@ def test_unknown_portfolio_returns_not_found(client):
     assert response.status_code == 404
 
 
+def test_user_cannot_access_other_user_transactions(client, monkeypatch):
+    user_a_headers = register_and_login(client, "user_a")
+    user_b_headers = register_and_login(client, "user_b")
+
+    portfolio_b = client.get("/portfolios", headers=user_b_headers).json()[0]
+    response = client.get(f"/portfolios/{portfolio_b['id_portfolio']}/transactions", headers=user_a_headers)
+
+    assert response.status_code == 404
+
+
+def test_buy_sell_with_unknown_ticker_returns_validation_error(client, monkeypatch):
+    headers = register_and_login(client, "ticker_user")
+
+    response_buy = client.post(
+        "/portfolios/buy",
+        json={
+            "ticker": "UNKNOWN",
+            "quantity": "10",
+            "price": "15.00",
+            "transaction_date": "2026-01-05",
+        },
+        headers=headers,
+    )
+    response_sell = client.post(
+        "/portfolios/sell",
+        json={
+            "ticker": "UNKNOWN",
+            "quantity": "1",
+            "price": "15.00",
+            "transaction_date": "2026-01-05",
+        },
+        headers=headers,
+    )
+
+    assert response_buy.status_code == 422
+    assert response_sell.status_code == 422
+
+
+def test_buy_with_invalid_quantity_or_price_returns_validation_error(client, monkeypatch):
+    headers = register_and_login(client, "invalid_transaction_user")
+    create_stock(client, headers, monkeypatch)
+
+    response_quantity_zero = client.post(
+        "/portfolios/buy",
+        json={
+            "ticker": "ABCD3",
+            "quantity": "0",
+            "price": "18.50",
+            "transaction_date": "2026-01-05",
+        },
+        headers=headers,
+    )
+    response_quantity_negative = client.post(
+        "/portfolios/buy",
+        json={
+            "ticker": "ABCD3",
+            "quantity": "-1",
+            "price": "18.50",
+            "transaction_date": "2026-01-05",
+        },
+        headers=headers,
+    )
+    response_price_zero = client.post(
+        "/portfolios/buy",
+        json={
+            "ticker": "ABCD3",
+            "quantity": "10",
+            "price": "0",
+            "transaction_date": "2026-01-05",
+        },
+        headers=headers,
+    )
+    response_price_negative = client.post(
+        "/portfolios/buy",
+        json={
+            "ticker": "ABCD3",
+            "quantity": "10",
+            "price": "-5.00",
+            "transaction_date": "2026-01-05",
+        },
+        headers=headers,
+    )
+
+    assert response_quantity_zero.status_code == 422
+    assert response_quantity_negative.status_code == 422
+    assert response_price_zero.status_code == 422
+    assert response_price_negative.status_code == 422
+
+
 def test_positions_and_summary_are_calculated_from_transactions(client, monkeypatch):
     from decimal import Decimal
 
