@@ -67,6 +67,8 @@ class FixedIncome(Asset):
         
         if not isinstance(inflation, Decimal):
             raise InvalidRateError("Inflação deve ser Decimal, não float")
+        if inflation == Decimal("-1"):
+            raise InvalidRateError("Inflação não pode ser igual a -1")
         
         taxa_real = ((1 + nominal_rate) / (1 + inflation)) - 1
         

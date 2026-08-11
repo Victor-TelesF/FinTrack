@@ -1,3 +1,5 @@
+import secrets
+
 from fastapi import APIRouter, Depends, Header
 
 from app.config import settings
@@ -10,7 +12,7 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 
 def verify_admin_key(x_admin_key: str | None = Header(default=None)) -> None:
-    if not settings.ADMIN_KEY or x_admin_key != settings.ADMIN_KEY:
+    if not settings.ADMIN_KEY or not secrets.compare_digest(x_admin_key or "", settings.ADMIN_KEY):
         raise InvalidAdminKeyError()
 
 

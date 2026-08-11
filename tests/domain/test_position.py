@@ -117,6 +117,12 @@ class TestPositionAddTransaction:
         with pytest.raises(InsufficientBalanceError):
             position.add_transaction(make_tx(petr4, "15", "35", TransactionType.SELL, 10))
 
+    def test_sell_before_existing_buy_raises(self, petr4):
+        position = Position(petr4)
+        position.add_transaction(make_tx(petr4, "10", "30", TransactionType.BUY, 5))
+        with pytest.raises(InsufficientBalanceError):
+            position.add_transaction(make_tx(petr4, "10", "35", TransactionType.SELL, 1))
+
     def test_sell_exact_owned_quantity_is_allowed(self, petr4):
         position = Position(petr4)
         position.add_transaction(make_tx(petr4, "10", "30", TransactionType.BUY, 5))

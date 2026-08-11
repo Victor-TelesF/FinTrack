@@ -32,7 +32,11 @@ class PortfolioService:
         statement = (
             select(TransactionModel)
             .where(TransactionModel.id_portfolio == portfolio_id)
-            .order_by(TransactionModel.transaction_date, TransactionModel.id_transaction)
+            .order_by(
+                TransactionModel.transaction_date,
+                TransactionModel.created_at,
+                TransactionModel.id_transaction,
+            )
         )
         return list(self._db.execute(statement).scalars().all())
 
@@ -55,6 +59,9 @@ class PortfolioService:
             transaction.asset_id: transaction.asset
             for transaction in portfolio_model.transactions
         }
+        assets_by_ticker = {
+            model.ticker: model for model in asset_models.values()
+        }
         result = []
         for position in portfolio.positions.values():
             current_price = price_source.get_latest_price(position.asset.ticker)
@@ -63,11 +70,7 @@ class PortfolioService:
             pnl = market_value - cost_basis
             return_percentage = (pnl / cost_basis * 100) if cost_basis else 0
             result.append({
-                "asset": next(
-                    model
-                    for model in asset_models.values()
-                    if model.ticker == position.asset.ticker
-                ),
+                "asset": assets_by_ticker[position.asset.ticker],
                 "quantity": position.quantity,
                 "average_price": position.average_price,
                 "current_price": current_price,
@@ -161,7 +164,11 @@ class PortfolioService:
         asset_cache: dict[UUID, object] = {}
         transactions = sorted(
             portfolio_model.transactions,
-            key=lambda transaction: (transaction.transaction_date, transaction.id_transaction),
+            key=lambda transaction: (
+                transaction.transaction_date,
+                transaction.created_at,
+                transaction.id_transaction,
+            ),
         )
         for transaction in transactions:
             asset = asset_cache.setdefault(

@@ -1,8 +1,8 @@
-from sqlalchemy import String, Numeric, Date, Enum, ForeignKey
+from sqlalchemy import String, Numeric, Date, DateTime, Enum, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from decimal import Decimal
 from typing import TYPE_CHECKING
-from datetime import date
+from datetime import date, datetime
 from ..database import Base
 from uuid import UUID, uuid4
 from domain.enums import TransactionType
@@ -25,6 +25,7 @@ class TransactionModel(Base):
     price: Mapped[Decimal] = mapped_column(Numeric(precision=18, scale=8))
     transaction_type: Mapped[TransactionType] = mapped_column(Enum(TransactionType, name="transaction_type_enum", create_constraint=True, validate_strings=True),nullable=False)
     transaction_date: Mapped[date] = mapped_column(Date)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
 class PortfolioModel(Base):

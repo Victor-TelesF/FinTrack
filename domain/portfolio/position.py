@@ -92,9 +92,18 @@ class Position:
         if transaction.asset != self.asset:
             raise InvalidValueError("Ativo de transacao não pode ser diferente da posição")
         
-        if transaction.transaction_type == TransactionType.SELL:
-            if transaction.quantity > self.quantity:
-                raise InsufficientBalanceError("Não é possivel vender mais do que possui")
+        transactions = sorted(
+            [*self._transaction_list, transaction],
+            key=lambda current_transaction: current_transaction.transaction_date,
+        )
+        available_quantity = Decimal("0")
+        for current_transaction in transactions:
+            if current_transaction.transaction_type == TransactionType.BUY:
+                available_quantity += current_transaction.quantity
+            else:
+                available_quantity -= current_transaction.quantity
+                if available_quantity < 0:
+                    raise InsufficientBalanceError("Não é possivel vender mais do que possui")
         
         self._transaction_list.append(transaction)
 

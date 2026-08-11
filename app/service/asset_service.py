@@ -85,7 +85,11 @@ class AssetService:
             else:
                 model = AssetMapper.to_model(domain_asset, model=existing)
             models.append(model)
-        self._db.commit()
+        try:
+            self._db.commit()
+        except IntegrityError:
+            self._db.rollback()
+            raise AssetAlreadyExistsError()
         for model in models:
             self._db.refresh(model)
         return models
