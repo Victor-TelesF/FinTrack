@@ -20,7 +20,10 @@ class AuthService:
     async def register(self, user_data: UserCreate) -> UserModel:
 
         stmt = select(UserModel).where(UserModel.user_name == user_data.user_name)
-        existing = await self._db.execute(stmt)
+        if isinstance(self._db, AsyncSession):
+            existing = await self._db.execute(stmt)
+        else:
+            existing = self._db.execute(stmt)
         existing_user = existing.scalar_one_or_none()
 
         if existing_user:
@@ -36,17 +39,29 @@ class AuthService:
 
         self._db.add(user)
         try:
-            await self._db.commit()
+            if isinstance(self._db, AsyncSession):
+                await self._db.commit()
+            else:
+                self._db.commit()
         except IntegrityError:
-            await self._db.rollback()
+            if isinstance(self._db, AsyncSession):
+                await self._db.rollback()
+            else:
+                self._db.rollback()
             raise UserAlreadyExistsError()
-        await self._db.refresh(user)
+        if isinstance(self._db, AsyncSession):
+            await self._db.refresh(user)
+        else:
+            self._db.refresh(user)
 
         return user
 
     async def login(self, credentials: UserLogin) -> TokenRead:
         stmt = select(UserModel).where(UserModel.user_name == credentials.user_name)
-        result = await self._db.execute(stmt)
+        if isinstance(self._db, AsyncSession):
+            result = await self._db.execute(stmt)
+        else:
+            result = self._db.execute(stmt)
         user = result.scalar_one_or_none()
 
         if user is None:
@@ -64,7 +79,10 @@ class AuthService:
 
         user = self._token_handler.decode_token(token)
         stmt = select(UserModel).where(UserModel.user_id == UUID(user))
-        result = await self._db.execute(stmt)
+        if isinstance(self._db, AsyncSession):
+            result = await self._db.execute(stmt)
+        else:
+            result = self._db.execute(stmt)
         user_verification = result.scalar_one_or_none()
 
         if not user_verification:
