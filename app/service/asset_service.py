@@ -17,6 +17,7 @@ from app.models import (
     NationalStockModel,
     RealEstateFundModel,
 )
+from sqlalchemy.orm import selectin_polymorphic
 from app.schemas.asset_schema import AdminAssetItem, AssetBaseCreate
 from app.schemas.fixed_income_schema import CDBCreate, GovernmentBondCreate
 from app.schemas.variable_income_schema import (
@@ -63,13 +64,41 @@ class AssetService:
         return _model_payload(model)
 
     async def list(self) -> list[AssetModel]:
-        statement = select(AssetModel).order_by(AssetModel.ticker)
+        statement = (
+            select(AssetModel)
+            .options(
+                selectin_polymorphic(AssetModel, [
+                    CDBModel,
+                    GovernmentBondModel,
+                    NationalStockModel,
+                    InternationalStockModel,
+                    RealEstateFundModel,
+                    CryptocurrencyModel,
+                ])
+            )
+            .order_by(AssetModel.ticker)
+        )
         result = await self._db.execute(statement)
         models = list(result.scalars().all())
         return [_model_payload(m) for m in models]
 
     async def get(self, asset_id: UUID) -> AssetModel:
-        model = await self._db.get(AssetModel, asset_id)
+        statement = (
+            select(AssetModel)
+            .where(AssetModel.id == asset_id)
+            .options(
+                selectin_polymorphic(AssetModel, [
+                    CDBModel,
+                    GovernmentBondModel,
+                    NationalStockModel,
+                    InternationalStockModel,
+                    RealEstateFundModel,
+                    CryptocurrencyModel,
+                ])
+            )
+        )
+        result = await self._db.execute(statement)
+        model = result.scalar_one_or_none()
         if model is None:
             raise AssetNotFoundError()
         return _model_payload(model)
