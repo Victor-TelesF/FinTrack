@@ -17,9 +17,9 @@ def verify_admin_key(x_admin_key: str | None = Header(default=None)) -> None:
 
 
 @router.post("/assets", response_model=list[AssetCatalogRead])
-def upsert_assets(
+async def upsert_assets(
     payload: AdminAssetUpsertRequest,
     service: AssetService = Depends(get_asset_service),
     _: None = Depends(verify_admin_key),
 ):
-    return service.upsert_many(payload.assets)
+    return await service.upsert_many(payload.assets)

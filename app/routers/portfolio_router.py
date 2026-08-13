@@ -13,21 +13,21 @@ router = APIRouter(prefix="/portfolios", tags=["portfolios"])
 
 
 @router.get("", response_model=list[PortfolioRead])
-def list_portfolios(
+async def list_portfolios(
     current_user: UserModel = Depends(get_current_user),
     service: PortfolioService = Depends(get_portfolio_service),
 ):
-    return service.list_for_user(current_user.user_id)
+    return await service.list_for_user(current_user.user_id)
 
 
 @router.post("/buy", response_model=TransactionRead)
-def buy_asset(
+async def buy_asset(
     transaction_data: TransactionCreate,
     current_user: UserModel = Depends(get_current_user),
     service: PortfolioService = Depends(get_portfolio_service),
 ):
-    portfolio = service.get_user_portfolio(current_user.user_id)
-    return service.add_transaction(
+    portfolio = await service.get_user_portfolio(current_user.user_id)
+    return await service.add_transaction(
         portfolio.id_portfolio,
         current_user.user_id,
         transaction_data,
@@ -36,13 +36,13 @@ def buy_asset(
 
 
 @router.post("/sell", response_model=TransactionRead)
-def sell_asset(
+async def sell_asset(
     transaction_data: TransactionCreate,
     current_user: UserModel = Depends(get_current_user),
     service: PortfolioService = Depends(get_portfolio_service),
 ):
-    portfolio = service.get_user_portfolio(current_user.user_id)
-    return service.add_transaction(
+    portfolio = await service.get_user_portfolio(current_user.user_id)
+    return await service.add_transaction(
         portfolio.id_portfolio,
         current_user.user_id,
         transaction_data,
@@ -51,34 +51,34 @@ def sell_asset(
 
 
 @router.get("/transactions", response_model=list[TransactionRead])
-def list_user_transactions(
+async def list_user_transactions(
     current_user: UserModel = Depends(get_current_user),
     service: PortfolioService = Depends(get_portfolio_service),
 ):
-    portfolio = service.get_user_portfolio(current_user.user_id)
-    return service.list_transactions(portfolio.id_portfolio, current_user.user_id)
+    portfolio = await service.get_user_portfolio(current_user.user_id)
+    return await service.list_transactions(portfolio.id_portfolio, current_user.user_id)
 
 
 @router.get("/positions", response_model=list[PositionRead])
-def list_positions(
+async def list_positions(
     current_user: UserModel = Depends(get_current_user),
     service: PortfolioService = Depends(get_portfolio_service),
 ):
-    return service.positions(current_user.user_id)
+    return await service.positions(current_user.user_id)
 
 
 @router.get("/summary", response_model=PortfolioSummaryRead)
-def get_summary(
+async def get_summary(
     current_user: UserModel = Depends(get_current_user),
     service: PortfolioService = Depends(get_portfolio_service),
 ):
-    return service.summary(current_user.user_id)
+    return await service.summary(current_user.user_id)
 
 
 @router.get("/{portfolio_id}/transactions", response_model=list[TransactionRead])
-def list_transactions(
+async def list_transactions(
     portfolio_id: UUID,
     current_user: UserModel = Depends(get_current_user),
     service: PortfolioService = Depends(get_portfolio_service),
 ):
-    return service.list_transactions(portfolio_id, current_user.user_id)
+    return await service.list_transactions(portfolio_id, current_user.user_id)
