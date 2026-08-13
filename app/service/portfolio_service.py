@@ -25,14 +25,16 @@ from app.models import (
 from app.schemas.transaction_schema import TransactionCreate
 from domain.enums import TransactionType
 from domain.exceptions import FinTrackError
+
 from domain.portfolio.portfolio import Portfolio
-from app.price_source import DatabasePriceSource
+from domain.protocols import PriceRequest, PriceSource
 
 
 class PortfolioService:
 
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, price_source: PriceSource):
         self._db = db
+        self._price_source = price_source
 
     async def list_for_user(self, user_id: UUID) -> list[PortfolioModel]:
         statement = select(PortfolioModel).where(PortfolioModel.user_id == user_id)
@@ -93,7 +95,7 @@ class PortfolioService:
     async def positions(self, user_id: UUID):
         portfolio_model = await self.get_user_portfolio(user_id)
         portfolio = self._rebuild_domain_portfolio(portfolio_model)
-        price_source = DatabasePriceSource(self._db)
+        price_source = self._price_source
         asset_models = {
             transaction.asset_id: transaction.asset
             for transaction in portfolio_model.transactions
@@ -101,9 +103,21 @@ class PortfolioService:
         assets_by_ticker = {
             model.ticker: model for model in asset_models.values()
         }
+        # build batch requests
+        requests = [
+            PriceRequest(
+                ticker=position.asset.ticker,
+                asset_type=assets_by_ticker[position.asset.ticker].asset_type,
+                external_price_id=assets_by_ticker[position.asset.ticker].external_price_id,
+            )
+            for position in portfolio.positions.values()
+        ]
+
+        prices = await price_source.get_latest_prices(requests)
+
         result = []
         for position in portfolio.positions.values():
-            current_price = await price_source.get_latest_price(position.asset.ticker)
+            current_price = prices.get(position.asset.ticker)
             cost_basis = position.quantity * position.average_price
             market_value = position.quantity * current_price
             pnl = market_value - cost_basis

@@ -45,8 +45,8 @@ def get_asset_service(db: AsyncSession = Depends(get_db)) -> AssetService:
     return AssetService(db)
 
 
-def get_portfolio_service(db: AsyncSession = Depends(get_db)) -> PortfolioService:
-    return PortfolioService(db)
+def get_portfolio_service(db: AsyncSession = Depends(get_db), price_source: MarketPriceSource = Depends(get_price_source)) -> PortfolioService:
+    return PortfolioService(db, price_source)
 async def get_current_user(user_credential: AuthService = Depends(get_auth_service),
                            token: str = Depends(oauth2_scheme)) -> UserModel:
     return await user_credential.get_auth_user(token)
