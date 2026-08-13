@@ -12,6 +12,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.exc import IntegrityError
 
 from app.config import Settings
@@ -23,7 +24,9 @@ from app.errors.exceptions import InvalidCredentialsError, InvalidTokenError, Us
 
 settings_teste = Settings(_env_file=".env.test")
 engine_teste = create_engine(settings_teste.database_url)
+async_engine_teste = create_async_engine(settings_teste.database_url)
 SessionTeste = sessionmaker(autocommit=False, autoflush=False, bind=engine_teste)
+AsyncSessionTeste = async_sessionmaker(async_engine_teste, expire_on_commit=False, autoflush=False)
 
 
 @pytest.fixture(scope="function")
@@ -34,12 +37,9 @@ def setup_database():
 
 
 @pytest.fixture
-def db(setup_database):
-    session = SessionTeste()
-    try:
+async def db(setup_database):
+    async with AsyncSessionTeste() as session:
         yield session
-    finally:
-        session.close()
 
 
 @pytest.fixture
