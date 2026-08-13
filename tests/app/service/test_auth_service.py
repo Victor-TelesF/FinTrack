@@ -82,7 +82,8 @@ class TestGetAuthUser:
 
 
 class TestRegisterHandlesIntegrityError:
-    def test_commit_integrity_error_is_converted_to_user_already_exists(
+    @pytest.mark.asyncio
+    async def test_commit_integrity_error_is_converted_to_user_already_exists(
         self, auth_service, db, monkeypatch
     ):
         def fake_commit():
