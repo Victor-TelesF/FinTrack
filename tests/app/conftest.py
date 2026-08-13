@@ -35,4 +35,5 @@ def setup_database():
 @pytest.fixture
 def client(setup_database):
     reset_rate_limit_state()
-    return TestClient(app)
+    with TestClient(app) as tc:
+        yield tc
