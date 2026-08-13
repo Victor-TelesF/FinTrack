@@ -60,18 +60,19 @@ class AssetService:
             await self._db.rollback()
             raise AssetAlreadyExistsError()
         await self._db.refresh(model)
-        return model
+        return _model_payload(model)
 
     async def list(self) -> list[AssetModel]:
         statement = select(AssetModel).order_by(AssetModel.ticker)
         result = await self._db.execute(statement)
-        return list(result.scalars().all())
+        models = list(result.scalars().all())
+        return [_model_payload(m) for m in models]
 
     async def get(self, asset_id: UUID) -> AssetModel:
         model = await self._db.get(AssetModel, asset_id)
         if model is None:
             raise AssetNotFoundError()
-        return model
+        return _model_payload(model)
 
     async def upsert_many(self, assets: list[AdminAssetItem]) -> list[AssetModel]:
         models = []
@@ -101,7 +102,23 @@ class AssetService:
             raise AssetAlreadyExistsError()
         for model in models:
             await self._db.refresh(model)
-        return models
+        return [_model_payload(m) for m in models]
+
+
+def _model_payload(model: AssetModel) -> dict:
+    return {
+        "id": model.id,
+        "name": model.name,
+        "ticker": model.ticker,
+        "current_price": model.current_price,
+        "asset_type": model.asset_type,
+        "rate": getattr(model, "rate", None),
+        "maturity_date": getattr(model, "maturity_date", None),
+        "fgc_covered": getattr(model, "fgc_covered", None),
+        "liquidity_type": getattr(model, "liquidity_type", None),
+        "index_type": getattr(model, "index_type", None),
+        "bond_index_type": getattr(model, "bond_index_type", None),
+    }
 
 
 def _domain_asset_from_schema(asset_data: AssetBaseCreate):
