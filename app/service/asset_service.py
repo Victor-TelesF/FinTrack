@@ -5,7 +5,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.mappers.asset_mapper import AssetMapper
 from app.models import (
@@ -47,38 +47,40 @@ AssetCreate = TypeVar(
 
 class AssetService:
 
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self._db = db
 
-    def create(self, asset_data: AssetCreate) -> AssetModel:
+    async def create(self, asset_data: AssetCreate) -> AssetModel:
         asset = _domain_asset_from_schema(asset_data)
         model = AssetMapper.to_model(asset)
         self._db.add(model)
         try:
-            self._db.commit()
+            await self._db.commit()
         except IntegrityError:
-            self._db.rollback()
+            await self._db.rollback()
             raise AssetAlreadyExistsError()
-        self._db.refresh(model)
+        await self._db.refresh(model)
         return model
 
-    def list(self) -> list[AssetModel]:
+    async def list(self) -> list[AssetModel]:
         statement = select(AssetModel).order_by(AssetModel.ticker)
-        return list(self._db.execute(statement).scalars().all())
+        result = await self._db.execute(statement)
+        return list(result.scalars().all())
 
-    def get(self, asset_id: UUID) -> AssetModel:
-        model = self._db.get(AssetModel, asset_id)
+    async def get(self, asset_id: UUID) -> AssetModel:
+        model = await self._db.get(AssetModel, asset_id)
         if model is None:
             raise AssetNotFoundError()
         return model
 
-    def upsert_many(self, assets: list[AdminAssetItem]) -> list[AssetModel]:
+    async def upsert_many(self, assets: list[AdminAssetItem]) -> list[AssetModel]:
         models = []
         for asset_data in assets:
             domain_asset = _domain_asset_from_admin_item(asset_data)
-            existing = self._db.execute(
+            result = await self._db.execute(
                 select(AssetModel).where(AssetModel.ticker == asset_data.ticker)
-            ).scalar_one_or_none()
+            )
+            existing = result.scalar_one_or_none()
             if existing is None:
                 model = AssetMapper.to_model(domain_asset)
                 self._db.add(model)
@@ -86,12 +88,12 @@ class AssetService:
                 model = AssetMapper.to_model(domain_asset, model=existing)
             models.append(model)
         try:
-            self._db.commit()
+            await self._db.commit()
         except IntegrityError:
-            self._db.rollback()
+            await self._db.rollback()
             raise AssetAlreadyExistsError()
         for model in models:
-            self._db.refresh(model)
+            await self._db.refresh(model)
         return models
 
 

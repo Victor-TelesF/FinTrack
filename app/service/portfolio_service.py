@@ -3,14 +3,25 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import selectinload, selectin_polymorphic
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.errors.exceptions import (
     InvalidPortfolioTransactionError,
     PortfolioNotFoundError,
 )
 from app.mappers.asset_mapper import AssetMapper
-from app.models import AssetModel, PortfolioModel, TransactionModel
+from app.models import (
+    AssetModel,
+    PortfolioModel,
+    TransactionModel,
+    CDBModel,
+    GovernmentBondModel,
+    NationalStockModel,
+    InternationalStockModel,
+    RealEstateFundModel,
+    CryptocurrencyModel,
+)
 from app.schemas.transaction_schema import TransactionCreate
 from domain.enums import TransactionType
 from domain.exceptions import FinTrackError
@@ -20,38 +31,67 @@ from app.price_source import DatabasePriceSource
 
 class PortfolioService:
 
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self._db = db
 
-    def list_for_user(self, user_id: UUID) -> list[PortfolioModel]:
+    async def list_for_user(self, user_id: UUID) -> list[PortfolioModel]:
         statement = select(PortfolioModel).where(PortfolioModel.user_id == user_id)
-        return list(self._db.execute(statement).scalars().all())
+        result = await self._db.execute(statement)
+        return list(result.scalars().all())
 
-    def list_transactions(self, portfolio_id: UUID, user_id: UUID) -> list[TransactionModel]:
-        self._get_owned_portfolio(portfolio_id, user_id)
+    async def list_transactions(self, portfolio_id: UUID, user_id: UUID) -> list[TransactionModel]:
+        await self._get_owned_portfolio(portfolio_id, user_id)
         statement = (
             select(TransactionModel)
             .where(TransactionModel.id_portfolio == portfolio_id)
+            .options(
+                selectinload(TransactionModel.asset).options(
+                    selectin_polymorphic(AssetModel, [
+                        CDBModel,
+                        GovernmentBondModel,
+                        NationalStockModel,
+                        InternationalStockModel,
+                        RealEstateFundModel,
+                        CryptocurrencyModel,
+                    ])
+                )
+            )
             .order_by(
                 TransactionModel.transaction_date,
                 TransactionModel.transaction_sequence,
             )
         )
-        return list(self._db.execute(statement).scalars().all())
+        result = await self._db.execute(statement)
+        return list(result.scalars().all())
 
-    def get_user_portfolio(self, user_id: UUID) -> PortfolioModel:
+    async def get_user_portfolio(self, user_id: UUID) -> PortfolioModel:
         statement = (
             select(PortfolioModel)
             .where(PortfolioModel.user_id == user_id)
             .order_by(PortfolioModel.id_portfolio)
+            .options(
+                selectinload(PortfolioModel.transactions).options(
+                    selectinload(TransactionModel.asset).options(
+                        selectin_polymorphic(AssetModel, [
+                            CDBModel,
+                            GovernmentBondModel,
+                            NationalStockModel,
+                            InternationalStockModel,
+                            RealEstateFundModel,
+                            CryptocurrencyModel,
+                        ])
+                    )
+                )
+            )
         )
-        portfolio = self._db.execute(statement).scalars().first()
+        result = await self._db.execute(statement)
+        portfolio = result.scalars().first()
         if portfolio is None:
             raise PortfolioNotFoundError()
         return portfolio
 
-    def positions(self, user_id: UUID):
-        portfolio_model = self.get_user_portfolio(user_id)
+    async def positions(self, user_id: UUID):
+        portfolio_model = await self.get_user_portfolio(user_id)
         portfolio = self._rebuild_domain_portfolio(portfolio_model)
         price_source = DatabasePriceSource(self._db)
         asset_models = {
@@ -63,7 +103,7 @@ class PortfolioService:
         }
         result = []
         for position in portfolio.positions.values():
-            current_price = price_source.get_latest_price(position.asset.ticker)
+            current_price = await price_source.get_latest_price(position.asset.ticker)
             cost_basis = position.quantity * position.average_price
             market_value = position.quantity * current_price
             pnl = market_value - cost_basis
@@ -80,8 +120,8 @@ class PortfolioService:
             })
         return result
 
-    def summary(self, user_id: UUID):
-        positions = self.positions(user_id)
+    async def summary(self, user_id: UUID):
+        positions = await self.positions(user_id)
         total_cost = sum((item["cost_basis"] for item in positions), start=0)
         total_equity = sum((item["market_value"] for item in positions), start=0)
         total_pnl = total_equity - total_cost
@@ -92,15 +132,15 @@ class PortfolioService:
             "return_percentage": (total_pnl / total_cost * 100) if total_cost else 0,
         }
 
-    def add_transaction(
+    async def add_transaction(
         self,
         portfolio_id: UUID,
         user_id: UUID,
         transaction_data: TransactionCreate,
         transaction_type: TransactionType,
     ) -> TransactionModel:
-        portfolio_model = self._get_owned_portfolio(portfolio_id, user_id)
-        asset_model = self._get_asset(transaction_data.ticker)
+        portfolio_model = await self._get_owned_portfolio(portfolio_id, user_id)
+        asset_model = await self._get_asset(transaction_data.ticker)
         domain_portfolio = self._rebuild_domain_portfolio(portfolio_model)
         existing_position = domain_portfolio.positions.get(asset_model.ticker)
         domain_asset = (
@@ -137,23 +177,38 @@ class PortfolioService:
             asset=asset_model,
         )
         self._db.add(model)
-        self._db.commit()
-        self._db.refresh(model)
+        await self._db.commit()
+        await self._db.refresh(model)
         return model
 
-    def _get_owned_portfolio(self, portfolio_id: UUID, user_id: UUID) -> PortfolioModel:
+    async def _get_owned_portfolio(self, portfolio_id: UUID, user_id: UUID) -> PortfolioModel:
         statement = select(PortfolioModel).where(
             PortfolioModel.id_portfolio == portfolio_id,
             PortfolioModel.user_id == user_id,
+        ).options(
+            selectinload(PortfolioModel.transactions).options(
+                selectinload(TransactionModel.asset).options(
+                    selectin_polymorphic(AssetModel, [
+                        CDBModel,
+                        GovernmentBondModel,
+                        NationalStockModel,
+                        InternationalStockModel,
+                        RealEstateFundModel,
+                        CryptocurrencyModel,
+                    ])
+                )
+            )
         )
-        portfolio = self._db.execute(statement).scalar_one_or_none()
+        result = await self._db.execute(statement)
+        portfolio = result.scalar_one_or_none()
         if portfolio is None:
             raise PortfolioNotFoundError()
         return portfolio
 
-    def _get_asset(self, ticker: str) -> AssetModel:
+    async def _get_asset(self, ticker: str) -> AssetModel:
         statement = select(AssetModel).where(AssetModel.ticker == ticker)
-        asset = self._db.execute(statement).scalar_one_or_none()
+        result = await self._db.execute(statement)
+        asset = result.scalar_one_or_none()
         if asset is None:
             raise InvalidPortfolioTransactionError("Ativo não encontrado")
         return asset

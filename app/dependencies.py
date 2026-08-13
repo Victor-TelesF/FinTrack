@@ -41,5 +41,4 @@ def get_portfolio_service(db: AsyncSession = Depends(get_db)) -> PortfolioServic
     return PortfolioService(db)
 async def get_current_user(user_credential: AuthService = Depends(get_auth_service),
                            token: str = Depends(oauth2_scheme)) -> UserModel:
-    # TODO fase 2: AuthService.get_auth_user becomes async and this must `await`
-    return user_credential.get_auth_user(token)
+    return await user_credential.get_auth_user(token)
