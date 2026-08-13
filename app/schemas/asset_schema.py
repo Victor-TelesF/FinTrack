@@ -40,6 +40,7 @@ class AdminAssetItem(BaseModel):
     ]
     name: str
     ticker: str
+    external_price_id: str | None = None
     current_price: Decimal
     rate: Decimal | None = None
     maturity_date: date | None = None
@@ -47,6 +48,18 @@ class AdminAssetItem(BaseModel):
     liquidity_type: LiquidityType | None = None
     index_type: IndexType | None = None
     bond_index_type: BondIndexType | None = None
+
+    from pydantic import model_validator
+
+    @model_validator(mode="after")
+    def _require_price_id_for_crypto(self):
+        if self.type == "cryptocurrency" and not self.external_price_id:
+            raise ValueError(
+                "cryptocurrency requer external_price_id explícito (id do CoinGecko, ex: 'bitcoin') — "
+                "símbolos como 'ETH' ou 'LUNA' são ambíguos entre moedas diferentes e não podem ser "
+                "resolvidos automaticamente sem risco de pegar o preço da moeda errada"
+            )
+        return self
 
 
 class AdminAssetUpsertRequest(BaseModel):

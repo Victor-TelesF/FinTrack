@@ -13,6 +13,7 @@ class AssetModel(Base):
     name: Mapped[str] = mapped_column(String(50))
     ticker: Mapped[str] = mapped_column(String(50))
     current_price: Mapped[Decimal] = mapped_column(Numeric(precision=18,scale=8))
+    external_price_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     type_column: Mapped[str] = mapped_column(String(50))
 
     @property

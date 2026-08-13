@@ -86,6 +86,13 @@ class AssetService:
                 self._db.add(model)
             else:
                 model = AssetMapper.to_model(domain_asset, model=existing)
+            # populate infrastructure-only field external_price_id
+            # For cryptocurrencies, external_price_id must be explicitly provided (validated by schema)
+            model.external_price_id = (
+                asset_data.external_price_id
+                if asset_data.external_price_id
+                else (None if asset_data.type == "cryptocurrency" else asset_data.ticker)
+            )
             models.append(model)
         try:
             await self._db.commit()
