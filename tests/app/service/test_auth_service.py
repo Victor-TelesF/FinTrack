@@ -57,25 +57,28 @@ def auth_service(db, token_handler):
 
 
 @pytest.fixture
-def registered_user(auth_service):
-    return auth_service.register(UserCreate(user_name="victor", password="senha123"))
+async def registered_user(auth_service):
+    return await auth_service.register(UserCreate(user_name="victor", password="senha123"))
 
 
 class TestGetAuthUser:
-    def test_valid_token_returns_correct_user(self, auth_service, registered_user, token_handler):
+    @pytest.mark.asyncio
+    async def test_valid_token_returns_correct_user(self, auth_service, registered_user, token_handler):
         token = token_handler.create_token(user_id=str(registered_user.user_id))
-        result = auth_service.get_auth_user(token)
+        result = await auth_service.get_auth_user(token)
         assert result.user_id == registered_user.user_id
         assert result.user_name == registered_user.user_name
 
-    def test_valid_token_but_user_not_in_db_raises(self, auth_service, token_handler):
+    @pytest.mark.asyncio
+    async def test_valid_token_but_user_not_in_db_raises(self, auth_service, token_handler):
         token = token_handler.create_token(user_id=str(uuid4()))
         with pytest.raises(InvalidCredentialsError):
-            auth_service.get_auth_user(token)
+            await auth_service.get_auth_user(token)
 
-    def test_invalid_token_raises(self, auth_service):
+    @pytest.mark.asyncio
+    async def test_invalid_token_raises(self, auth_service):
         with pytest.raises(InvalidTokenError):
-            auth_service.get_auth_user("token.invalido.aqui")
+            await auth_service.get_auth_user("token.invalido.aqui")
 
 
 class TestRegisterHandlesIntegrityError:
@@ -88,4 +91,4 @@ class TestRegisterHandlesIntegrityError:
         monkeypatch.setattr(db, "commit", fake_commit)
 
         with pytest.raises(UserAlreadyExistsError):
-            auth_service.register(UserCreate(user_name="victor", password="senha123"))
+            await auth_service.register(UserCreate(user_name="victor", password="senha123"))
