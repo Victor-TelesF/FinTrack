@@ -12,7 +12,6 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.exc import IntegrityError
 
 from app.config import Settings
@@ -24,9 +23,7 @@ from app.errors.exceptions import InvalidCredentialsError, InvalidTokenError, Us
 
 settings_teste = Settings(_env_file=".env.test")
 engine_teste = create_engine(settings_teste.database_url)
-async_engine_teste = create_async_engine(settings_teste.database_url)
 SessionTeste = sessionmaker(autocommit=False, autoflush=False, bind=engine_teste)
-AsyncSessionTeste = async_sessionmaker(async_engine_teste, expire_on_commit=False, autoflush=False)
 
 
 @pytest.fixture(scope="function")
@@ -37,9 +34,12 @@ def setup_database():
 
 
 @pytest.fixture
-async def db(setup_database):
-    async with AsyncSessionTeste() as session:
+def db(setup_database):
+    session = SessionTeste()
+    try:
         yield session
+    finally:
+        session.close()
 
 
 @pytest.fixture
@@ -52,44 +52,50 @@ def token_handler():
 
 
 @pytest.fixture
-async def auth_service(db, token_handler):
+def auth_service(db, token_handler):
     return AuthService(db, PasswordHandler(), token_handler)
 
 
 @pytest.fixture
-async def registered_user(auth_service):
-    return await auth_service.register(UserCreate(user_name="victor", password="senha123"))
+def registered_user(auth_service):
+    import asyncio
+
+    return asyncio.run(auth_service.register(UserCreate(user_name="victor", password="senha123")))
 
 
 class TestGetAuthUser:
-    @pytest.mark.asyncio
-    async def test_valid_token_returns_correct_user(self, auth_service, registered_user, token_handler):
+    def test_valid_token_returns_correct_user(self, auth_service, registered_user, token_handler):
+        import asyncio
+
         token = token_handler.create_token(user_id=str(registered_user.user_id))
-        result = await auth_service.get_auth_user(token)
+        result = asyncio.run(auth_service.get_auth_user(token))
         assert result.user_id == registered_user.user_id
         assert result.user_name == registered_user.user_name
 
-    @pytest.mark.asyncio
-    async def test_valid_token_but_user_not_in_db_raises(self, auth_service, token_handler):
+    def test_valid_token_but_user_not_in_db_raises(self, auth_service, token_handler):
+        import asyncio
+
         token = token_handler.create_token(user_id=str(uuid4()))
         with pytest.raises(InvalidCredentialsError):
-            await auth_service.get_auth_user(token)
+            asyncio.run(auth_service.get_auth_user(token))
 
-    @pytest.mark.asyncio
-    async def test_invalid_token_raises(self, auth_service):
+    def test_invalid_token_raises(self, auth_service):
+        import asyncio
+
         with pytest.raises(InvalidTokenError):
-            await auth_service.get_auth_user("token.invalido.aqui")
+            asyncio.run(auth_service.get_auth_user("token.invalido.aqui"))
 
 
 class TestRegisterHandlesIntegrityError:
-    @pytest.mark.asyncio
-    async def test_commit_integrity_error_is_converted_to_user_already_exists(
+    def test_commit_integrity_error_is_converted_to_user_already_exists(
         self, auth_service, db, monkeypatch
     ):
-        async def fake_commit():
+        def fake_commit():
             raise IntegrityError("INSERT INTO user...", params={}, orig=Exception("duplicate key"))
 
         monkeypatch.setattr(db, "commit", fake_commit)
 
+        import asyncio
+
         with pytest.raises(UserAlreadyExistsError):
-            await auth_service.register(UserCreate(user_name="victor", password="senha123"))
+            asyncio.run(auth_service.register(UserCreate(user_name="victor", password="senha123")))
