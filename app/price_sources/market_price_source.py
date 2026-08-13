@@ -102,7 +102,7 @@ class MarketPriceSource:
         if leftovers:
             tickers = [r.ticker for r in leftovers]
             try:
-                fb = await self._fallback.get_latest_prices(leftovers)
+                fb = await self._fallback.get_latest_prices(tickers)
                 for r in leftovers:
                     if r.ticker in fb:
                         results[r.ticker] = fb[r.ticker]
