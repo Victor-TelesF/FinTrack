@@ -48,3 +48,9 @@ class InvalidAdminKeyError(AppError):
 
     def __init__(self, message: str = "Chave administrativa inválida"):
         super().__init__(message)
+
+
+class PriceUnavailableError(AppError):
+
+    def __init__(self, message: str = "Preço indisponível"):
+        super().__init__(message)

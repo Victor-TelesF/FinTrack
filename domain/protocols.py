@@ -6,6 +6,7 @@ return strategy and price source abstractions.
 
 from typing import Protocol, runtime_checkable
 from decimal import Decimal
+from dataclasses import dataclass
 from .return_context import ReturnContext
 
 
@@ -14,29 +15,25 @@ class ReturnStrategy(Protocol):
     """Protocol for return calculation strategies."""
 
     def calculate(self, rate: Decimal, context: ReturnContext) -> Decimal:
-        """Calculate a return based on a rate and return context.
-
-        Args:
-            rate (Decimal): The rate used for the calculation.
-            context (ReturnContext): The calculation context.
-
-        Returns:
-            Decimal: The calculated return.
-        """
         ...
+
+
+@dataclass(frozen=True)
+class PriceRequest:
+    """Dados suficientes para um PriceSource resolver o preço sem ambiguidade."""
+
+    ticker: str
+    asset_type: str
+    external_price_id: str | None
 
 
 @runtime_checkable
 class PriceSource(Protocol):
-    """Protocol for price source data providers."""
+    """Protocol for price source data providers (async)."""
 
-    def get_latest_price(self, ticker: str) -> Decimal:
-        """Get the latest price for the given ticker.
+    async def get_latest_price(self, request: PriceRequest) -> Decimal:
+        ...
 
-        Args:
-            ticker (str): The asset ticker symbol.
-
-        Returns:
-            Decimal: The latest market price.
-        """
+    async def get_latest_prices(self, requests: list[PriceRequest]) -> dict[str, Decimal]:
+        """Return a dict indexed by ticker."""
         ...

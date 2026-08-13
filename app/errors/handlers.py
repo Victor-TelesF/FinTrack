@@ -47,3 +47,9 @@ def register_exception_handlers(app: FastAPI) -> None:
         request: Request, exc: InvalidPortfolioTransactionError
     ):
         return JSONResponse(status_code=422, content={"detail": str(exc)})
+
+    from .exceptions import PriceUnavailableError
+
+    @app.exception_handler(PriceUnavailableError)
+    def handle_price_unavailable(request: Request, exc: PriceUnavailableError):
+        return JSONResponse(status_code=503, content={"detail": str(exc)})
