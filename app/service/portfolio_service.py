@@ -64,7 +64,23 @@ class PortfolioService:
             )
         )
         result = await self._db.execute(statement)
-        return list(result.scalars().all())
+        transactions = list(result.scalars().all())
+        payloads = []
+        for t in transactions:
+            payloads.append({
+                "id_transaction": t.id_transaction,
+                "asset": {
+                    "id": t.asset.id,
+                    "name": t.asset.name,
+                    "ticker": t.asset.ticker,
+                    "current_price": t.asset.current_price,
+                },
+                "quantity": t.quantity,
+                "price": t.price,
+                "transaction_type": t.transaction_type,
+                "transaction_date": t.transaction_date,
+            })
+        return payloads
 
     async def get_user_portfolio(self, user_id: UUID) -> PortfolioModel:
         statement = (
@@ -208,7 +224,19 @@ class PortfolioService:
         self._db.add(model)
         await self._db.commit()
         await self._db.refresh(model)
-        return model
+        return {
+            "id_transaction": model.id_transaction,
+            "asset": {
+                "id": asset_model.id,
+                "name": asset_model.name,
+                "ticker": asset_model.ticker,
+                "current_price": asset_model.current_price,
+            },
+            "quantity": model.quantity,
+            "price": model.price,
+            "transaction_type": model.transaction_type,
+            "transaction_date": model.transaction_date,
+        }
 
     async def _get_owned_portfolio(self, portfolio_id: UUID, user_id: UUID) -> PortfolioModel:
         statement = select(PortfolioModel).where(
