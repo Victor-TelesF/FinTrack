@@ -122,8 +122,23 @@ class PortfolioService:
             market_value = position.quantity * current_price
             pnl = market_value - cost_basis
             return_percentage = (pnl / cost_basis * 100) if cost_basis else 0
+            model = assets_by_ticker[position.asset.ticker]
+            asset_payload = {
+                "id": model.id,
+                "name": model.name,
+                "ticker": model.ticker,
+                "current_price": model.current_price,
+                "asset_type": model.asset_type,
+                "rate": getattr(model, "rate", None),
+                "maturity_date": getattr(model, "maturity_date", None),
+                "fgc_covered": getattr(model, "fgc_covered", None),
+                "liquidity_type": getattr(model, "liquidity_type", None),
+                "index_type": getattr(model, "index_type", None),
+                "bond_index_type": getattr(model, "bond_index_type", None),
+            }
+
             result.append({
-                "asset": assets_by_ticker[position.asset.ticker],
+                "asset": asset_payload,
                 "quantity": position.quantity,
                 "average_price": position.average_price,
                 "current_price": current_price,
