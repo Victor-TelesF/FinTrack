@@ -15,6 +15,12 @@ class Settings(BaseSettings):
     ADMIN_KEY: str = ""
     FRONTEND_ORIGINS: str = "http://localhost:3000"
 
+    # Price provider configuration
+    BRAPI_TOKEN: str = ""
+    TWELVEDATA_API_KEY: str = ""
+    PRICE_CACHE_TTL_SECONDS: int = 60
+    PRICE_FETCH_TIMEOUT_SECONDS: float = 5.0
+
     @property
     def frontend_origins(self) -> list[str]:
         return [origin.strip() for origin in self.FRONTEND_ORIGINS.split(",") if origin.strip()]
