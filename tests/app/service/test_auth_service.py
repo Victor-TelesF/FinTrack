@@ -52,7 +52,7 @@ def token_handler():
 
 
 @pytest.fixture
-def auth_service(db, token_handler):
+async def auth_service(db, token_handler):
     return AuthService(db, PasswordHandler(), token_handler)
 
 
@@ -86,7 +86,7 @@ class TestRegisterHandlesIntegrityError:
     async def test_commit_integrity_error_is_converted_to_user_already_exists(
         self, auth_service, db, monkeypatch
     ):
-        def fake_commit():
+        async def fake_commit():
             raise IntegrityError("INSERT INTO user...", params={}, orig=Exception("duplicate key"))
 
         monkeypatch.setattr(db, "commit", fake_commit)
