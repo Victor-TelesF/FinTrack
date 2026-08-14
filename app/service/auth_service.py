@@ -18,12 +18,8 @@ class AuthService:
         self._token_handler = token_handler
 
     async def register(self, user_data: UserCreate) -> UserModel:
-
         stmt = select(UserModel).where(UserModel.user_name == user_data.user_name)
-        if isinstance(self._db, AsyncSession):
-            existing = await self._db.execute(stmt)
-        else:
-            existing = self._db.execute(stmt)
+        existing = await self._db.execute(stmt)
         existing_user = existing.scalar_one_or_none()
 
         if existing_user:
@@ -39,29 +35,17 @@ class AuthService:
 
         self._db.add(user)
         try:
-            if isinstance(self._db, AsyncSession):
-                await self._db.commit()
-            else:
-                self._db.commit()
+            await self._db.commit()
         except IntegrityError:
-            if isinstance(self._db, AsyncSession):
-                await self._db.rollback()
-            else:
-                self._db.rollback()
+            await self._db.rollback()
             raise UserAlreadyExistsError()
-        if isinstance(self._db, AsyncSession):
-            await self._db.refresh(user)
-        else:
-            self._db.refresh(user)
+        await self._db.refresh(user)
 
         return user
 
     async def login(self, credentials: UserLogin) -> TokenRead:
         stmt = select(UserModel).where(UserModel.user_name == credentials.user_name)
-        if isinstance(self._db, AsyncSession):
-            result = await self._db.execute(stmt)
-        else:
-            result = self._db.execute(stmt)
+        result = await self._db.execute(stmt)
         user = result.scalar_one_or_none()
 
         if user is None:
@@ -79,10 +63,7 @@ class AuthService:
 
         user = self._token_handler.decode_token(token)
         stmt = select(UserModel).where(UserModel.user_id == UUID(user))
-        if isinstance(self._db, AsyncSession):
-            result = await self._db.execute(stmt)
-        else:
-            result = self._db.execute(stmt)
+        result = await self._db.execute(stmt)
         user_verification = result.scalar_one_or_none()
 
         if not user_verification:
