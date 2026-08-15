@@ -133,7 +133,7 @@ class PortfolioService:
 
         result = []
         for position in portfolio.positions.values():
-            current_price = prices.get(position.asset.ticker)
+            current_price = prices[position.asset.ticker]
             cost_basis = position.quantity * position.average_price
             market_value = position.quantity * current_price
             pnl = market_value - cost_basis

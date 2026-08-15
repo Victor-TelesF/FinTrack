@@ -5,11 +5,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import settings
 from .routers import admin_router, asset_router, auth_router, portfolio_router
 from .errors import register_exception_handlers
+from app.price_sources.cache import SimplePriceCache
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.http_client = httpx.AsyncClient(timeout=settings.PRICE_FETCH_TIMEOUT_SECONDS)
+    app.state.price_cache = SimplePriceCache(settings.PRICE_CACHE_TTL_SECONDS)
     try:
         yield
     finally:

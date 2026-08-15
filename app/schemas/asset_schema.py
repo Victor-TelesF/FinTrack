@@ -1,9 +1,10 @@
 from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
 from decimal import Decimal
 from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, model_validator
 from domain.enums import BondIndexType, IndexType, LiquidityType
 
 class AssetBaseCreate(BaseModel):
@@ -48,8 +49,6 @@ class AdminAssetItem(BaseModel):
     liquidity_type: LiquidityType | None = None
     index_type: IndexType | None = None
     bond_index_type: BondIndexType | None = None
-
-    from pydantic import model_validator
 
     @model_validator(mode="after")
     def _require_price_id_for_crypto(self):

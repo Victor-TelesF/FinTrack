@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 import asyncio
+import logging
 from typing import Dict, List
 
 from domain.protocols import PriceRequest, PriceSource
@@ -9,6 +10,8 @@ from app.price_sources.cache import SimplePriceCache
 from app.price_sources.exceptions import PriceProviderError
 from app.price_source import DatabasePriceSource
 from app.errors.exceptions import PriceUnavailableError
+
+logger = logging.getLogger(__name__)
 
 
 class MarketPriceSource:
@@ -25,41 +28,43 @@ class MarketPriceSource:
         if cached is not None:
             return cached
 
-        adapter = self._adapters.get(request.asset_type)
-        if adapter is None:
-            # route to fallback silently
-            try:
-                price = await self._fallback.get_latest_price(request.ticker if isinstance(request.ticker, str) else request.ticker)
-            except KeyError:
-                raise PriceUnavailableError(f"Preço indisponível para {request.ticker}")
-            self._cache.set(request, price)
-            return price
+        async with self._cache.lock_for(request):
+            cached = self._cache.get(request)
+            if cached is not None:
+                return cached
 
-        if not getattr(adapter, "is_configured", lambda: True)():
-            # log once per asset_type (INFO)
-            if request.asset_type not in self._info_logged:
-                self._info_logged.add(request.asset_type)
-            # go to fallback
-            try:
-                price = await self._fallback.get_latest_price(request.ticker)
-            except KeyError:
-                raise PriceUnavailableError(f"Preço indisponível para {request.ticker}")
-            self._cache.set(request, price)
-            return price
+            adapter = self._adapters.get(request.asset_type)
+            if adapter is None:
+                try:
+                    price = await self._fallback.get_latest_price(request)
+                except KeyError:
+                    raise PriceUnavailableError(f"Preço indisponível para {request.ticker}")
+                self._cache.set(request, price)
+                return price
 
-        # attempt adapter
-        try:
-            price = await adapter.get_latest_price(request)
-            self._cache.set(request, price)
-            return price
-        except PriceProviderError as exc:
-            # log warning and fallback
+            if not getattr(adapter, "is_configured", lambda: True)():
+                if request.asset_type not in self._info_logged:
+                    logger.info("Provider desabilitado para asset_type=%s; usando fallback para %s", request.asset_type, request.ticker)
+                    self._info_logged.add(request.asset_type)
+                try:
+                    price = await self._fallback.get_latest_price(request)
+                except KeyError:
+                    raise PriceUnavailableError(f"Preço indisponível para {request.ticker}")
+                self._cache.set(request, price)
+                return price
+
             try:
-                price = await self._fallback.get_latest_price(request.ticker)
-            except KeyError:
-                raise PriceUnavailableError(f"Preço indisponível para {request.ticker}")
-            self._cache.set(request, price)
-            return price
+                price = await adapter.get_latest_price(request)
+                self._cache.set(request, price)
+                return price
+            except PriceProviderError as exc:
+                logger.warning("Falha ao obter preço para %s (%s): %s", request.ticker, request.asset_type, exc)
+                try:
+                    price = await self._fallback.get_latest_price(request)
+                except KeyError:
+                    raise PriceUnavailableError(f"Preço indisponível para {request.ticker}")
+                self._cache.set(request, price)
+                return price
 
     async def get_latest_prices(self, requests: List[PriceRequest]) -> Dict[str, Decimal]:
         results: Dict[str, Decimal] = {}
@@ -74,7 +79,6 @@ class MarketPriceSource:
         if not to_fetch:
             return results
 
-        # group by asset_type
         groups: Dict[str, List[PriceRequest]] = {}
         for r in to_fetch:
             groups.setdefault(r.asset_type, []).append(r)
@@ -82,34 +86,53 @@ class MarketPriceSource:
         leftovers: List[PriceRequest] = []
         for asset_type, group in groups.items():
             adapter = self._adapters.get(asset_type)
-            if adapter is None or not getattr(adapter, "is_configured", lambda: True)():
+            if adapter is None:
+                leftovers.extend(group)
+                continue
+            if not getattr(adapter, "is_configured", lambda: True)():
+                if asset_type not in self._info_logged:
+                    logger.info("Provider desabilitado para asset_type=%s; usando fallback para %s", asset_type, [r.ticker for r in group])
+                    self._info_logged.add(asset_type)
                 leftovers.extend(group)
                 continue
             try:
                 batch = await adapter.get_latest_prices(group)
-            except PriceProviderError:
+            except PriceProviderError as exc:
+                logger.warning("Falha ao obter lote para asset_type=%s: %s", asset_type, exc)
                 leftovers.extend(group)
                 continue
-            # batch may be partial
             for r in group:
-                if r.ticker in batch:
-                    results[r.ticker] = batch[r.ticker]
-                    self._cache.set(r, batch[r.ticker])
-                else:
-                    leftovers.append(r)
+                async with self._cache.lock_for(r):
+                    cached = self._cache.get(r)
+                    if cached is not None:
+                        results[r.ticker] = cached
+                        continue
+                    if r.ticker in batch:
+                        results[r.ticker] = batch[r.ticker]
+                        self._cache.set(r, batch[r.ticker])
+                    else:
+                        leftovers.append(r)
 
-        # fallback in one call if possible
+        failed_tickers: List[str] = []
         if leftovers:
             tickers = [r.ticker for r in leftovers]
             try:
-                fb = await self._fallback.get_latest_prices(tickers)
+                fb = await self._fallback.get_latest_prices(leftovers)
                 for r in leftovers:
-                    if r.ticker in fb:
-                        results[r.ticker] = fb[r.ticker]
-                        self._cache.set(r, fb[r.ticker])
-                    else:
-                        raise PriceUnavailableError(f"Preço indisponível para {r.ticker}")
+                    async with self._cache.lock_for(r):
+                        cached = self._cache.get(r)
+                        if cached is not None:
+                            results[r.ticker] = cached
+                            continue
+                        if r.ticker in fb:
+                            results[r.ticker] = fb[r.ticker]
+                            self._cache.set(r, fb[r.ticker])
+                        else:
+                            failed_tickers.append(r.ticker)
             except KeyError:
-                raise PriceUnavailableError("Alguns preços indisponíveis")
+                failed_tickers.extend(tickers)
+
+        if failed_tickers:
+            raise PriceUnavailableError(f"Preços indisponíveis para: {', '.join(failed_tickers)}")
 
         return results
