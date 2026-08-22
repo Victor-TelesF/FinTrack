@@ -4,113 +4,103 @@ markdown
   <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" />
   <img src="https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white" />
   <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
-  <img src="https://img.shields.io/badge/pytest-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white" />
+  <a href="https://github.com/Victor-TelesF/fintrack/actions/workflows/ci.yml">
+    <img src="https://github.com/Victor-TelesF/fintrack/actions/workflows/ci.yml/badge.svg" />
+  </a>
+  <!-- Se o arquivo não se chamar ci.yml, troca o caminho acima pelo nome real do arquivo em .github/workflows/ -->
   <img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" />
 </p>
 
 <h1 align="center">🏦 FinTrack API</h1>
 
 <p align="center">
-    <b>API REST para gestão de carteiras de investimento</b><br>
-  Arquitetura limpa, domínio polimórfico e cálculo de rentabilidade unificado para múltiplas classes de ativos.
+    <b>API REST para consolidar rentabilidade de ativos diferentes numa única carteira</b><br>
+  CDBs indexados ao CDI, Tesouro Selic/IPCA+, ações, FIIs e cripto — cada um com sua própria fórmula de retorno, tratados de forma unificada.
+</p>
+
+<p align="center">
+  <a href="https://fintrack-ye2t.onrender.com/docs"><b>🔗 API rodando ao vivo — Swagger interativo</b></a>
+</p>
+
+<!--
+Opcional: GIF curto (5-10s) mostrando login → POST /portfolios/buy → GET /portfolios/summary
+gravado a partir do link acima. Ferramentas: Peek (Linux), ScreenToGif (Windows).
+-->
+
+<p align="center">
+  <a href="#-como-executar">Como rodar</a> ·
+  <a href="#-endpoints-principais">Endpoints</a> ·
+  <a href="#-decisões-de-engenharia">Decisões técnicas</a> ·
+  <a href="#-o-que-aprendi">O que aprendi</a>
 </p>
 
 ---
 
-## 📌 Sobre o Projeto
+## 📌 Por que este projeto existe
 
-O **FinTrack** ataca um problema real do mercado financeiro: **como consolidar e calcular rentabilidade de ativos distintos** (CDBs indexados ao CDI, Tesouro IPCA+/Selic, Ações nacionais/internacionais, FIIs e Cripto) em uma única carteira, sem perder precisão nem extensibilidade.
+Consolidar uma carteira com CDB, Tesouro e ações num só número de rentabilidade não é trivial: cada tipo de ativo calcula retorno de um jeito diferente (indexador × taxa, valorização de cota + dividendo, ganho de capital simples). Tratar tudo com `if/else` funciona até o terceiro tipo de ativo — depois disso vira uma fonte constante de bugs cada vez que um indexador novo entra.
 
-O desafio central foi projetar uma camada de domínio puramente polimórfica, onde cada ativo adere a um contrato único de cálculo de retorno. Isso permite adicionar novos indexadores ou tipos de ativos **sem modificar o núcleo do sistema** — aplicação prática de OOP avançado, Strategy Pattern e do Princípio Aberto/Fechado (OCP).
-
-> 💡 Projeto construído do zero como exercício de arquitetura de software, com foco em separação estrita entre domínio e infraestrutura. O domínio financeiro foi escolhido por exigir regras de negócio rigorosas (precisão decimal, processamento cronológico de transações), tornando o desafio mais interessante do que um CRUD comum.
+O FinTrack é minha resposta a esse problema: uma API onde cada classe de ativo sabe calcular o próprio retorno, e adicionar um indexador novo não exige tocar em nada que já existe e já está testado.
 
 ---
 
-## 🛠️ Stack Tecnológica
+## 🛠️ Stack
 
-| Camada | Tecnologia | Por que foi escolhida |
-|--------|-----------|----------------------|
-| **API** | FastAPI + Uvicorn | Geração automática de docs e tipagem nativa via Pydantic |
-| **Persistência** | PostgreSQL + SQLAlchemy 2.0 + Alembic | ORM moderno com tipagem e migrations versionadas |
-| **Validação** | Pydantic v2 | Validação de dados robusta e integração nativa com FastAPI |
-| **Segurança** | python-jose + pwdlib | Autenticação JWT stateless: hash de senha, emissão e validação de token |
-| **Testes** | pytest + httpx | Testes unitários e de integração com cliente HTTP |
-| **Infra** | Docker + Docker Compose | Ambiente reproduzível em qualquer máquina |
+| Camada | Tecnologia | Por que |
+|--------|-----------|---------|
+| API | FastAPI + Uvicorn | Tipagem nativa via Pydantic, docs automáticas |
+| Persistência | PostgreSQL + SQLAlchemy 2.0 + Alembic | ORM tipado, migrations versionadas |
+| Autenticação | python-jose + pwdlib | JWT stateless, hash de senha com salt |
+| Testes | pytest + httpx | Unitários de domínio + integração via API |
+| Infra | Docker Compose | Ambiente reproduzível |
 
 ---
 
 ## 🏗️ Arquitetura
 
-O projeto segue a **regra de ouro da Arquitetura Limpa**: a camada de domínio **nunca** importa nada de infraestrutura — é o inverso: `app/` depende de `domain/`, nunca ao contrário.
+Regra que segui do início ao fim: `domain/` (Python puro, sem framework) nunca importa nada de `app/` (FastAPI, SQLAlchemy). A dependência é sempre numa direção só.
 
 ```text
 fintrack/
-├── domain/                  # Lógica de negócio, Python puro
-│   ├── assets/              # Hierarquia polimórfica de ativos
-│   ├── portfolio/           # Transaction, Position e Portfolio
-│   ├── strategies/          # Cálculo por indexador
-│   └── protocols.py         # PriceSource e ReturnStrategy
-├── app/                     # Infraestrutura e camada HTTP
-│   ├── main.py              # Ponto de entrada da API
-│   ├── config.py            # Settings via pydantic-settings
-│   ├── database.py          # Engine, Session e Base
-│   ├── dependencies.py      # Injeção de dependências FastAPI
-│   ├── auth/                # PasswordHandler e TokenHandler
-│   ├── mappers/             # Conversão ORM <-> domínio
-│   ├── price_source.py      # Fonte de preços persistidos
-│   ├── service/             # Services da aplicação
-│   ├── errors/              # Exceções e handlers HTTP
-│   ├── models/              # Modelos SQLAlchemy
-│   ├── schemas/             # Contratos Pydantic
-│   └── routers/             # Endpoints da API
-├── alembic/                 # Migrations versionadas
-├── tests/                   # Testes unitários e de integração
-├── docker-compose.yml
-├── Dockerfile
-├── alembic.ini
-└── .env.example
+├── domain/          # Regras de negócio, zero dependência externa
+│   ├── assets/       # Hierarquia de ativos e cálculo de retorno
+│   ├── portfolio/     # Transaction, Position, Portfolio
+│   └── strategies/    # Uma classe por indexador (CDI, IPCA, Selic, Prefixado)
+├── app/              # FastAPI, banco, autenticação
+│   ├── routers/        # Endpoints
+│   ├── service/          # Regras de aplicação (orquestra domínio + banco)
+│   ├── models/            # SQLAlchemy
+│   └── mappers/            # Converte ORM ↔ domínio
+├── alembic/          # Migrations
+└── tests/            # domain/ testado sem banco nenhum; app/ testado via API
 ```
 
-
-### 🌳 Hierarquia de Domínio
+**Por que separar assim:** a suíte de testes do domínio inteiro roda sem subir Postgres — dá pra validar toda a lógica de cálculo de rentabilidade em milissegundos, sem depender de infraestrutura.
 
 ```text
 Asset (ABC)
-├── FixedIncome (ABC)
-│   ├── CDB
-│   └── GovernmentBond
-└── VariableIncome (ABC)
-    ├── Stock (ABC)
-    │   ├── NationalStock
-    │   └── InternationalStock
-    ├── RealEstateFund
-    └── Cryptocurrency
+├── FixedIncome (ABC) ── CDB, GovernmentBond
+└── VariableIncome (ABC) ── Stock (NationalStock, InternationalStock), RealEstateFund, Cryptocurrency
 ```
-
-
-Essa hierarquia é replicada na camada de persistência via **Joined Table Inheritance** (SQLAlchemy 2.0): cada classe que adiciona um campo próprio ganha uma tabela própria, ligada por chave estrangeira à tabela pai imediata, preservando o polimorfismo do domínio também no banco.
 
 ---
 
 ## 🧠 Decisões de Engenharia
 
-| Decisão | Problema que resolve |
-|---------|---------------------|
-| **Strategy Pattern** | Isola a fórmula de cada indexador. Novo cálculo = nova classe, sem tocar nos ativos existentes. |
-| **Factory/Registry** | Garante que cada ativo use a estratégia correta para seu indexador automaticamente. |
-| **Template Method** | Centraliza validações comuns em `VariableIncome`, evitando duplicação nas subclasses. |
-| **Position calculada em memória** | Preço médio e quantidade são derivados do histórico de transações — elimina risco de dessincronização. Não vira tabela própria: é recalculada a partir da lista de transações, reaproveitando a `Position` do domínio já testada. |
-| **PriceSource via Protocol** | Permite trocar fontes de preço (API real vs. mock) sem acoplar o domínio a uma implementação concreta. |
-| **IDs como UUID** | Identificadores não previsíveis, consistentes entre domínio e banco. |
-| **Joined Table Inheritance** | Mapeia a hierarquia polimórfica de `Asset` sem colunas `NULL` sobrando (Single Table) nem duplicação de campos comuns (Concrete Table). |
-| **JWT stateless via `get_current_user`** | Protege rotas sem consultar estado de sessão a cada request — a validação (assinatura + expiração) é puramente criptográfica; o usuário só é buscado no banco depois de o token já ser confirmado válido. |
+Em vez de listar padrões pelo nome, aqui está o problema que cada um resolveu de fato:
+
+| Problema real | Decisão | Sem isso... |
+|---|---|---|
+| Cada indexador (CDI, IPCA, Selic, taxa fixa) calcula retorno com uma fórmula diferente, e novos indexadores vão continuar aparecendo | Strategy Pattern: uma classe por fórmula, escolhida via registry | Toda vez que um indexador novo entrasse, eu precisaria editar um `if/elif` gigante e arriscar quebrar os já existentes |
+| Preço médio e quantidade da carteira podem ficar dessincronizados do histórico de transações se forem guardados como colunas separadas | `Position` recalcula tudo a partir da lista de transações, em memória | Um bug de update em background podia deixar o preço médio mostrado errado sem nenhum erro visível |
+| O domínio precisa buscar preço de mercado, mas não pode depender de como esse preço é obtido (banco hoje, API externa amanhã) | `PriceSource` como `Protocol` — o domínio só conhece a interface | Trocar a fonte de preço exigiria reescrever a lógica de cálculo de P&L, não só a integração |
+| Cada tipo de ativo tem colunas próprias (CDB tem `fgc_covered`, ação tem `currency`), mas todos compartilham `name`/`ticker`/`current_price` | Joined Table Inheritance no SQLAlchemy | Ou eu teria uma tabela com dezenas de colunas `NULL` pra maioria das linhas, ou duplicaria os campos comuns em cada tabela |
 
 ---
 
-## 💻 Exemplo de Uso
+## 💻 Exemplo de uso
 
-A camada de domínio é totalmente funcional e testável de forma independente — sem banco de dados, sem servidor HTTP:
+A camada de domínio funciona isolada — sem banco, sem servidor HTTP:
 
 ```python
 from decimal import Decimal
@@ -118,25 +108,12 @@ from datetime import date
 from domain.assets.variable_income import NationalStock
 from domain.portfolio.portfolio import Portfolio
 
-# Configuração
-petr4 = NationalStock(
-    name="Petrobras",
-    ticker="PETR4",
-    current_price=Decimal("35.50")
-)
+petr4 = NationalStock(name="Petrobras", ticker="PETR4", current_price=Decimal("35.50"))
 portfolio = Portfolio(wallet_id="user-123")
 
-# Operação
-portfolio.buy(
-    asset=petr4,
-    quantity=Decimal("100"),
-    price=Decimal("30.00"),
-    buy_date=date(2026, 1, 5)
-)
+portfolio.buy(asset=petr4, quantity=Decimal("100"), price=Decimal("30.00"), buy_date=date(2026, 1, 5))
 
-# Resultados
 print(portfolio.positions["PETR4"].average_price)  # 30.00
-# portfolio.get_total_pnl(price_source) calcula o lucro com uma PriceSource.
 ```
 
 ---
@@ -144,26 +121,13 @@ print(portfolio.positions["PETR4"].average_price)  # 30.00
 ## ✅ Testes
 
 ```bash
-# Rodar todos os testes
-pytest
-
-# Com cobertura
-pytest --cov=domain --cov=app --cov-report=html
-
-# Verbose
-pytest -v
+pytest                                          # todos
+pytest --cov=domain --cov=app --cov-report=html # com cobertura
 ```
 
-**Resultado atual:** 167 testes com **100% de aprovação**, cobrindo:
-- Processamento cronológico de preço médio (compras e vendas intercaladas)
-- Proteção contra saldo insuficiente
-- Cálculo de rentabilidade por indexador (CDI, IPCA, Selic, Prefixado)
-- Hierarquia polimórfica de ativos e sincronização de estratégia após troca de indexador
-- Autenticação: hash/verificação de senha, emissão e validação de token JWT, registro e login via API, e resolução de usuário autenticado a partir do token (`get_auth_user`)
-- Catálogo de ativos com upsert administrativo e leitura autenticada
-- Compra, venda, histórico, posições, preço médio, P&L e resumo da carteira
-- Rate limit de login está implementado por IP e não por username, com expurgo periódico de entradas antigas
-- Fixed income `rate` usa precisão `18,8` em banco e há migration Alembic para a coluna existente
+Mais de 160 testes, a maioria de domínio (sem banco) e o resto de integração via API. CI no GitHub Actions roda a suíte a cada push/PR contra um Postgres real em container, aplicando as migrations do zero antes de testar — não é só um lint, é a suíte completa validando contra o schema real do banco.
+
+**Um bug real que a suíte pegou:** minha primeira versão de `average_price` processava as transações na ordem em que chegavam no banco. Um teste de regressão simulou uma venda entre duas compras da mesma ação e o preço médio deu errado — porque a venda "resetava" o cálculo em vez de simplesmente reduzir a quantidade sem afetar o preço médio. A correção foi ordenar sempre por `transaction_date` antes de calcular, nunca confiar na ordem de inserção. Ficou como teste de regressão (`test_sell_between_two_buys_does_not_corrupt_average`) pra nunca mais quebrar silenciosamente.
 
 ---
 
@@ -173,98 +137,40 @@ pytest -v
 - [Docker](https://docs.docker.com/get-docker/) e Docker Compose
 - [Git](https://git-scm.com/)
 
-### Passo a passo
-
 ```bash
-# 1. Clone o repositório
 git clone https://github.com/Victor-TelesF/fintrack.git
 cd fintrack
-
-# 2. Configure as variáveis de ambiente
-cp .env.example .env
-# Edite o .env com suas credenciais do PostgreSQL
-
-# 3. Suba a aplicação com Docker
-# O serviço web executa as migrations antes de iniciar a API.
+cp .env.example .env   # edite com suas credenciais do Postgres
 docker compose up --build
-
-# 4. Acesse a API
-# API:  http://localhost:8000
-# Docs: http://localhost:8000/docs
 ```
 
-Para aplicar migrations manualmente depois de uma alteração:
+- API: `http://localhost:8000`
+- Docs interativas: `http://localhost:8000/docs`
 
+Para aplicar migrations manualmente:
 ```bash
 docker compose exec web alembic upgrade head
 ```
 
-### Variáveis de ambiente (.env)
-
-O projeto usa `pydantic-settings` para ler a configuração — veja `.env.example` para o modelo completo:
-
-```env
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=replace-with-a-strong-password
-POSTGRES_HOST=db
-POSTGRES_PORT=5432
-POSTGRES_DB=fintrack
-
-SECRET_KEY=replace-with-a-long-random-secret
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-ADMIN_KEY=replace-with-a-long-random-admin-key
-FRONTEND_ORIGINS=http://localhost:3000
-```
-
-`FRONTEND_ORIGINS` aceita múltiplas origens separadas por vírgula, por exemplo:
-`http://localhost:3000,http://localhost:3001`.
+🔗 **Ambiente ao vivo (sem precisar rodar nada):** [fintrack-ye2t.onrender.com/docs](https://fintrack-ye2t.onrender.com/docs) — Swagger interativo, dá pra testar os endpoints direto no navegador. *(Plano free do Render: se ninguém acessou nos últimos minutos, o primeiro request pode levar ~30s pra "acordar" o serviço.)*
 
 ---
 
-## 📋 Roadmap
-
-- [x] Modelagem polimórfica de ativos (CDB, Tesouro, Ações, FIIs, Cripto)
-- [x] Cálculo de rentabilidade com Strategy Pattern
-- [x] Gestão de carteiras, transações e posições (domínio puro)
-- [x] Persistência com SQLAlchemy 2.0 + Joined Table Inheritance
-- [x] Migrations com Alembic
-- [x] Schemas Pydantic (Create/Read)
-- [x] Autenticação JWT (registro, login, dependência de usuário autenticado)
-- [x] Service layer e mapeamento ORM ↔ domínio
-- [x] Endpoints REST de ativos, carteiras, transações, posições e resumo
-- [x] 156 testes unitários e de integração
-- [ ] Refresh token (access token curto + revogação de sessão)
-- [ ] Alertas de preço (Observer Pattern)
-
-### Endpoints principais
+## 📋 Endpoints principais
 
 | Método | Endpoint | Autenticação |
 |--------|----------|--------------|
 | `POST` | `/auth/register` | Não |
 | `POST` | `/auth/login` | Não |
 | `GET` | `/assets` | JWT |
-| `GET` | `/assets/{asset_id}` | JWT |
 | `POST` | `/admin/assets` | `X-Admin-Key` |
 | `GET` | `/portfolios` | JWT |
 | `POST` | `/portfolios/buy` | JWT |
 | `POST` | `/portfolios/sell` | JWT |
-| `GET` | `/portfolios/transactions` | JWT |
 | `GET` | `/portfolios/positions` | JWT |
 | `GET` | `/portfolios/summary` | JWT |
 
-Ativos são cadastrados ou atualizados exclusivamente pelo endpoint administrativo. O payload aceita uma lista mista de CDBs, títulos públicos, ações, FIIs e criptomoedas. O usuário comum apenas consulta o catálogo e registra operações usando o ticker.
-
-### Fluxo recomendado para o frontend
-
-1. Registre o usuário com `POST /auth/register`.
-2. Faça login com `POST /auth/login` e guarde o `access_token`.
-3. Envie `Authorization: Bearer <access_token>` nas rotas protegidas.
-4. Consulte `GET /assets` para carregar o catálogo e `GET /portfolios/summary` para o dashboard.
-5. Envie compras e vendas para `/portfolios/buy` e `/portfolios/sell`.
-
 Exemplo de compra:
-
 ```json
 {
   "ticker": "PETR4",
@@ -274,29 +180,34 @@ Exemplo de compra:
 }
 ```
 
-As respostas financeiras usam strings decimais para evitar perda de precisão no JavaScript. O frontend deve converter esses valores apenas para formatação ou usar uma biblioteca decimal para novos cálculos.
-
-Erros seguem o formato `{ "detail": "mensagem" }`. Os casos principais são `401` para autenticação, `403` para a chave administrativa, `404` para recurso inexistente, `409` para conflito e `422` para payload ou operação inválida.
+Valores financeiros trafegam como strings decimais (evita perda de precisão no JSON/JavaScript). Erros seguem `{ "detail": "mensagem" }`, com `401`/`403`/`404`/`409`/`422` conforme o caso.
 
 ---
 
 ## 🎓 O que Aprendi
 
-- Como isolar 100% a lógica de negócio de frameworks, tornando o domínio testável sem banco de dados ou servidor HTTP.
-- Aplicação prática do **Princípio Aberto/Fechado (OCP)**: adicionar um novo indexador ou tipo de ativo sem modificar código existente.
-- Mapeamento de herança polimórfica para banco relacional com **Joined Table Inheritance**.
-- Importância de `Decimal` sobre `float` em cálculos financeiros para evitar erros de arredondamento silenciosos.
-- Como projetar testes que validam regras de negócio complexas de forma isolada, incluindo regressões (ex: processamento cronológico de transações fora de ordem de inserção).
-- Como compor dependências do FastAPI em cadeia (`Depends` encadeado) para autenticação JWT stateless, mantendo a lógica de negócio (consulta ao banco) fora da camada de wiring.
+- **`Decimal`, nunca `float`, em cálculo financeiro.** Erro de arredondamento silencioso em dinheiro é o tipo de bug que só aparece em produção, meses depois.
+- **Testar domínio isolado antes de integrar economiza tempo de debug.** Achar o bug de preço médio num teste unitário de domínio levou minutos; achar o mesmo bug via API, com banco no meio, teria levado muito mais.
+- **Ordem cronológica de eventos de negócio não pode depender de ordem de inserção no banco.** Parece óbvio escrito assim, mas só ficou óbvio depois do bug acima.
+- **Usei assistentes de IA (Claude Code, com revisão via GPT/Kimi) para partes de infraestrutura mais mecânicas** — rotas, mappers ORM, migrations — sempre a partir de uma spec que eu escrevi antes e revisando o código gerado linha a linha. Aprendi que isso acelera a digitação, mas não substitui entender o problema: mais de uma vez rejeitei uma "correção" sugerida porque ela escondia o sintoma em vez de resolver a causa.
+- Ainda não sei se a modelagem de domínio que fiz aqui aguenta bem, por exemplo, ativos com múltiplas moedas de forma limpa — é uma pergunta em aberto que quero investigar.
 
 ---
 
-## 🤝 Créditos
+## 📋 Próximos Passos
 
-Desenvolvido por [@Victor_TelesF](https://github.com/Victor-TelesF).
+- [ ] Migrar o backend para async (SQLAlchemy async engine, rotas e services assíncronos)
+- [ ] Substituir a fonte de preço atual (lida do próprio banco) por um provedor de mercado real
+
+---
+
+## 🤝 Contato
+
+[@Victor_TelesF](https://github.com/Victor-TelesF)
+<!-- TODO: adicionar link do LinkedIn -->
 
 ---
 
 ## 📝 Licença
 
-Distribuído sob a licença MIT. Veja [`LICENSE`](LICENSE) para mais informações.
+MIT. Veja [`LICENSE`](LICENSE).
