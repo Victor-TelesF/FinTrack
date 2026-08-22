@@ -48,6 +48,10 @@ class TestFixedIncomeRealRate:
         with pytest.raises(InvalidRateError):
             FixedIncome.real_rate(Decimal("0"), Decimal("0.05"))
 
+    def test_real_rate_rejects_inflation_equal_to_negative_one(self):
+        with pytest.raises(InvalidRateError):
+            FixedIncome.real_rate(Decimal("0.10"), Decimal("-1"))
+
 
 class TestCDB:
     def test_creates_with_valid_data(self, future_date):

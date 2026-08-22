@@ -12,7 +12,7 @@ class FixedIncomeModel(AssetModel):
     __tablename__ = "fixed_income"
 
     id: Mapped[UUID] = mapped_column(ForeignKey("asset.id"), primary_key=True)
-    rate: Mapped[Decimal] = mapped_column(Numeric)
+    rate: Mapped[Decimal] = mapped_column(Numeric(precision=18, scale=8))
     maturity_date: Mapped[date] = mapped_column(Date)
 
     __mapper_args__ = {"polymorphic_identity": "fixed_income"}

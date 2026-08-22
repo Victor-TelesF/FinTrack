@@ -47,6 +47,9 @@ def test_login_with_nonexistent_user_raises_invalid_credentials(client):
     assert response.status_code == 401
 
 
+from app.routers.auth_router import reset_rate_limit_state
+
+
 def test_login_with_wrong_password_raises_invalid_credentials(client):
     client.post("/auth/register", json={
         "user_name": "victor",
@@ -59,3 +62,42 @@ def test_login_with_wrong_password_raises_invalid_credentials(client):
     })
 
     assert response.status_code == 401
+
+
+def test_login_with_different_usernames_hits_rate_limit_by_ip(client):
+    reset_rate_limit_state()
+    for i in range(1, 6):
+        response = client.post("/auth/login", json={
+            "user_name": f"nonexistent_{i}",
+            "password": "qualquersenha",
+        })
+        assert response.status_code == 401, response.text
+
+    response = client.post("/auth/login", json={
+        "user_name": "nonexistent_6",
+        "password": "qualquersenha",
+    })
+    assert response.status_code == 429
+
+
+def test_login_requires_json_user_name_and_password(client):
+    response = client.post(
+        "/auth/login",
+        data={"username": "victor", "password": "senha123"},
+    )
+
+    assert response.status_code == 422
+
+
+def test_login_allows_configured_frontend_origin_with_credentials(client):
+    response = client.options(
+        "/auth/login",
+        headers={
+            "Origin": "http://localhost:3000",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://localhost:3000"
+    assert response.headers["access-control-allow-credentials"] == "true"

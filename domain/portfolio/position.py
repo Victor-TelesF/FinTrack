@@ -92,9 +92,24 @@ class Position:
         if transaction.asset != self.asset:
             raise InvalidValueError("Ativo de transacao não pode ser diferente da posição")
         
-        if transaction.transaction_type == TransactionType.SELL:
-            if transaction.quantity > self.quantity:
-                raise InsufficientBalanceError("Não é possivel vender mais do que possui")
+        transactions = [*self._transaction_list, transaction]
+        transactions = sorted(
+            enumerate(transactions),
+            key=lambda item: (
+                item[1].transaction_date,
+                item[1].transaction_sequence
+                if item[1].transaction_sequence is not None
+                else item[0],
+            ),
+        )
+        available_quantity = Decimal("0")
+        for _, current_transaction in transactions:
+            if current_transaction.transaction_type == TransactionType.BUY:
+                available_quantity += current_transaction.quantity
+            else:
+                available_quantity -= current_transaction.quantity
+                if available_quantity < 0:
+                    raise InsufficientBalanceError("Não é possivel vender mais do que possui")
         
         self._transaction_list.append(transaction)
 
@@ -108,9 +123,17 @@ class Position:
         current_quantity = Decimal("0")
         current_average_price = Decimal("0")
 
-        sorted_transactions = sorted(self._transaction_list, key=lambda tx: tx.transaction_date)
+        sorted_transactions = sorted(
+            enumerate(self._transaction_list),
+            key=lambda item: (
+                item[1].transaction_date,
+                item[1].transaction_sequence
+                if item[1].transaction_sequence is not None
+                else item[0],
+            ),
+        )
 
-        for transaction in sorted_transactions:
+        for _, transaction in sorted_transactions:
             if transaction.transaction_type == TransactionType.BUY:
                 new_quantity = current_quantity + transaction.quantity
                 total_value = (current_quantity * current_average_price) + (transaction.quantity * transaction.price)

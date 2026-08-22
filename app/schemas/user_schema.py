@@ -1,9 +1,9 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from uuid import UUID
 
 class UserCreate(BaseModel):
-    user_name: str
-    password: str
+    user_name: str = Field(max_length=50)
+    password: str = Field(min_length=8)
 
 class UserRead(BaseModel):
 

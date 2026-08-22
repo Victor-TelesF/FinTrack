@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from jose import jwt, JWTError
 from ..errors.exceptions import InvalidTokenError
 
@@ -11,7 +11,7 @@ class TokenHandler:
 
     def create_token(self, user_id: str) -> str:
 
-        expire = datetime.utcnow() + timedelta(minutes=self._expire_minutes)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=self._expire_minutes)
         payload = {"sub" : user_id, "exp": expire}
         return jwt.encode(payload, self._secret_key, algorithm=self._algorithm)
     
@@ -24,4 +24,8 @@ class TokenHandler:
         except JWTError:
             raise InvalidTokenError()
 
-        return payload["sub"]
+        subject = payload.get("sub")
+        if not isinstance(subject, str) or not subject:
+            raise InvalidTokenError()
+
+        return subject
