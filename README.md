@@ -129,6 +129,16 @@ Mais de 160 testes, a maioria de domínio (sem banco) e o resto de integração 
 
 **Um bug real que a suíte pegou:** minha primeira versão de `average_price` processava as transações na ordem em que chegavam no banco. Um teste de regressão simulou uma venda entre duas compras da mesma ação e o preço médio deu errado — porque a venda "resetava" o cálculo em vez de simplesmente reduzir a quantidade sem afetar o preço médio. A correção foi ordenar sempre por `transaction_date` antes de calcular, nunca confiar na ordem de inserção. Ficou como teste de regressão (`test_sell_between_two_buys_does_not_corrupt_average`) pra nunca mais quebrar silenciosamente.
 
+### Histórico de correção: venda bloqueada com saldo disponível (23/09/2026)
+
+Durante um teste pelo frontend, uma compra com preço informado manualmente seguida de uma tentativa de venda por outro preço retornou **"Não é possivel vender mais do que possui"**, mesmo havendo quantidade disponível. A investigação reproduziu uma falha em operações com a mesma data; a diferença entre os preços não era a causa.
+
+O problema estava no desempate da ordenação: transações já salvas tinham uma `transaction_sequence` gerada pelo banco e compartilhada entre carteiras, enquanto a operação nova, ainda sem sequência, usava seu índice na lista da posição. Esses números não representavam a mesma ordem. Por exemplo, uma compra salva com sequência `100` podia ficar depois de uma venda nova com índice `1`, fazendo a validação tentar vender antes de contabilizar a compra.
+
+A correção em [`Position`](domain/portfolio/position.py) mantém a data como primeiro critério e, dentro do mesmo dia, processa as transações persistidas pela sequência antes das novas, que mantêm sua ordem de inclusão. A regra vale tanto para validar o saldo quanto para calcular o preço médio. Vendas acima da quantidade disponível ou anteriores à compra continuam bloqueadas.
+
+Foram adicionados [testes de regressão no domínio](tests/domain/test_position.py) para vendas parciais e totais com preços menores, iguais e maiores que o de compra, preservação do saldo após uma venda inválida e preço médio de uma nova compra após uma venda no mesmo dia. O [teste da API](tests/app/routers/test_portfolio_router.py) também passou a incluir operações de outra carteira para exercitar a sequência compartilhada. Na validação local desta correção, os **125 testes de domínio passaram**; a execução dos testes HTTP ficou pendente porque o PostgreSQL de testes estava indisponível.
+
 ---
 
 ## 🚀 Como Executar
