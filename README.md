@@ -51,6 +51,7 @@ O FinTrack é minha resposta a esse problema: uma API onde cada classe de ativo 
 | API | FastAPI + Uvicorn | Tipagem nativa via Pydantic, docs automáticas |
 | Persistência | PostgreSQL + SQLAlchemy 2.0 + Alembic | ORM tipado, migrations versionadas |
 | Autenticação | python-jose + pwdlib | JWT stateless, hash de senha com salt |
+| Dependências | uv + pyproject.toml + uv.lock | Ambiente reproduzível com dependências de desenvolvimento separadas |
 | Testes | pytest + httpx | Unitários de domínio + integração via API |
 | Infra | Docker Compose | Ambiente reproduzível |
 
@@ -121,11 +122,14 @@ print(portfolio.positions["PETR4"].average_price)  # 30.00
 ## ✅ Testes
 
 ```bash
-pytest                                          # todos
-pytest --cov=domain --cov=app --cov-report=html # com cobertura
+uv sync --locked
+uv run --locked pytest tests/domain -q # domínio, sem banco
+uv run --locked pytest -q              # suíte completa, com PostgreSQL de testes
 ```
 
-Mais de 160 testes, a maioria de domínio (sem banco) e o resto de integração via API. CI no GitHub Actions roda a suíte a cada push/PR contra um Postgres real em container, aplicando as migrations do zero antes de testar — não é só um lint, é a suíte completa validando contra o schema real do banco.
+Para os testes de integração, crie um banco PostgreSQL exclusivo de testes e configure suas credenciais em `.env.test` (use `.env.example` como referência). Ao executar localmente, use `POSTGRES_HOST=localhost`. As fixtures criam e removem tabelas nesse banco a cada teste; não use o banco da aplicação. Variáveis de ambiente têm precedência sobre os arquivos `.env`, como no CI.
+
+176 testes, a maioria de domínio (sem banco) e o resto cobrindo a aplicação, incluindo integração via API. CI no GitHub Actions roda a suíte a cada push/PR contra um Postgres real em container, aplicando as migrations do zero antes de testar — não é só um lint, é a suíte completa validando contra o schema real do banco.
 
 **Um bug real que a suíte pegou:** minha primeira versão de `average_price` processava as transações na ordem em que chegavam no banco. Um teste de regressão simulou uma venda entre duas compras da mesma ação e o preço médio deu errado — porque a venda "resetava" o cálculo em vez de simplesmente reduzir a quantidade sem afetar o preço médio. A correção foi ordenar sempre por `transaction_date` antes de calcular, nunca confiar na ordem de inserção. Ficou como teste de regressão (`test_sell_between_two_buys_does_not_corrupt_average`) pra nunca mais quebrar silenciosamente.
 
@@ -139,11 +143,40 @@ A correção em [`Position`](domain/portfolio/position.py) mantém a data como p
 
 Foram adicionados [testes de regressão no domínio](tests/domain/test_position.py) para vendas parciais e totais com preços menores, iguais e maiores que o de compra, preservação do saldo após uma venda inválida e preço médio de uma nova compra após uma venda no mesmo dia. O [teste da API](tests/app/routers/test_portfolio_router.py) também passou a incluir operações de outra carteira para exercitar a sequência compartilhada. Na validação local desta correção, os **125 testes de domínio passaram**; a execução dos testes HTTP ficou pendente porque o PostgreSQL de testes estava indisponível.
 
+Na validação posterior da migração para uv, a suíte completa foi executada contra um PostgreSQL 15 temporário: **176 testes passaram**, incluindo o teste HTTP dessa correção.
+
 ---
 
 ## 🚀 Como Executar
 
-### Pré-requisitos
+### Desenvolvimento local com uv
+
+Instale o [uv](https://docs.astral.sh/uv/getting-started/installation/) e, na raiz do projeto, execute:
+
+```bash
+uv sync --locked
+cp .env.example .env
+# Configure o PostgreSQL e as chaves no .env; fora do Docker, use POSTGRES_HOST=localhost.
+uv run --locked alembic upgrade head
+uv run --locked uvicorn app.main:app --reload
+```
+
+O PostgreSQL precisa estar disponível antes de aplicar as migrations. A versão de Python usada é a 3.13, definida em `.python-version`. O `uv sync` cria e sincroniza a `.venv`, incluindo o grupo `dev`; não é necessário ativá-la para usar `uv run`.
+
+As dependências da aplicação ficam em `[project.dependencies]` no `pyproject.toml`, e as ferramentas de teste ficam em `[dependency-groups].dev`. O `uv.lock` registra as versões resolvidas, incluindo dependências indiretas. Ambos devem ser versionados; a `.venv` continua fora do Git. As configurações do pytest também ficam no `pyproject.toml`.
+
+```bash
+uv add nome-do-pacote       # dependência da aplicação
+uv add --dev nome-do-pacote # ferramenta de desenvolvimento
+uv remove nome-do-pacote    # remove uma dependência
+uv sync --locked           # instala conforme o lockfile, sem atualizá-lo
+```
+
+O projeto migrou de `pip` e `requirements.txt` para `uv`, preservando as versões das bibliotecas necessárias que estavam instaladas. O `requirements.txt` foi substituído pelo `pyproject.toml` e pelo `uv.lock`; novas dependências devem ser gerenciadas com os comandos acima. A aplicação continua sendo executada a partir da raiz, mantendo os diretórios `app/` e `domain/`.
+
+### Execução com Docker
+
+#### Pré-requisitos
 - [Docker](https://docs.docker.com/get-docker/) e Docker Compose
 - [Git](https://git-scm.com/)
 
@@ -153,6 +186,8 @@ cd fintrack
 cp .env.example .env   # edite com suas credenciais do Postgres
 docker compose up --build
 ```
+
+O Docker instala apenas as dependências da aplicação com `uv sync --locked --no-dev`. O ambiente virtual fica em `/opt/venv`, separado do volume do código em `/app` e da `.venv` local. O `start.sh` usa os executáveis desse ambiente pelo `PATH`, aplica as migrations e inicia a API. O CI usa `uv sync --locked` e executa migrations e testes com `uv run --locked`. Docker e CI fixam a versão do uv em `0.12.3`.
 
 - API: `http://localhost:8000`
 - Docs interativas: `http://localhost:8000/docs`
