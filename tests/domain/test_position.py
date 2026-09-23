@@ -57,6 +57,18 @@ class TestPositionQuantity:
 
 
 class TestPositionAveragePrice:
+    def test_new_buy_follows_persisted_same_day_sale(self, petr4):
+        buy = make_tx(petr4, "10", "30", TransactionType.BUY, 5)
+        buy.transaction_sequence = 100
+        sell = make_tx(petr4, "5", "50", TransactionType.SELL, 5)
+        sell.transaction_sequence = 101
+        position = Position(petr4, [buy, sell])
+
+        position.add_transaction(make_tx(petr4, "5", "40", TransactionType.BUY, 5))
+
+        assert position.quantity == Decimal("10")
+        assert position.average_price == Decimal("35")
+
     def test_single_buy_sets_average_price_to_purchase_price(self, petr4):
         position = Position(petr4)
         position.add_transaction(make_tx(petr4, "10", "30", TransactionType.BUY, 5))
@@ -101,6 +113,30 @@ class TestPositionAveragePrice:
 
 
 class TestPositionAddTransaction:
+    @pytest.mark.parametrize("sell_price", ["25", "30", "40"])
+    @pytest.mark.parametrize("sell_quantity", ["4", "10"])
+    def test_new_sale_follows_persisted_same_day_buy(self, petr4, sell_price, sell_quantity):
+        buy = make_tx(petr4, "10", "30", TransactionType.BUY, 5)
+        buy.transaction_sequence = 100
+        position = Position(petr4, [buy])
+
+        position.add_transaction(make_tx(petr4, sell_quantity, sell_price, TransactionType.SELL, 5))
+
+        assert position.quantity == Decimal("10") - Decimal(sell_quantity)
+        assert position.average_price == Decimal("30")
+
+    @pytest.mark.parametrize("sell_quantity, sell_day", [("11", 5), ("10", 4)])
+    def test_invalid_sale_after_persisted_buy_preserves_position(self, petr4, sell_quantity, sell_day):
+        buy = make_tx(petr4, "10", "30", TransactionType.BUY, 5)
+        buy.transaction_sequence = 100
+        position = Position(petr4, [buy])
+
+        with pytest.raises(InsufficientBalanceError):
+            position.add_transaction(make_tx(petr4, sell_quantity, "40", TransactionType.SELL, sell_day))
+
+        assert position.quantity == Decimal("10")
+        assert position.transaction_list == [buy]
+
     def test_rejects_non_transaction(self, petr4):
         position = Position(petr4)
         with pytest.raises(InvalidValueError):
