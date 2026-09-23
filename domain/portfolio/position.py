@@ -97,6 +97,8 @@ class Position:
             enumerate(transactions),
             key=lambda item: (
                 item[1].transaction_date,
+                # New transactions follow persisted ones on the same date.
+                item[1].transaction_sequence is None,
                 item[1].transaction_sequence
                 if item[1].transaction_sequence is not None
                 else item[0],
@@ -127,6 +129,7 @@ class Position:
             enumerate(self._transaction_list),
             key=lambda item: (
                 item[1].transaction_date,
+                item[1].transaction_sequence is None,
                 item[1].transaction_sequence
                 if item[1].transaction_sequence is not None
                 else item[0],
