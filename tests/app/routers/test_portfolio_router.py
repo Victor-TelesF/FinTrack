@@ -73,6 +73,21 @@ def test_positions_after_same_day_sell(client, monkeypatch):
     headers = register_and_login(client, "same_day_position_user")
     create_stock(client, headers, monkeypatch)
 
+    # The database sequence is shared across portfolios, not a position index.
+    other_headers = register_and_login(client, "other_position_user")
+    for _ in range(2):
+        response = client.post(
+            "/portfolios/buy",
+            json={
+                "ticker": "ABCD3",
+                "quantity": "1",
+                "price": "20.00",
+                "transaction_date": "2026-01-05",
+            },
+            headers=other_headers,
+        )
+        assert response.status_code == 200, response.text
+
     for quantity, price in (("10", "18.50"), ("5", "19.00")):
         response = client.post(
             "/portfolios/buy",
