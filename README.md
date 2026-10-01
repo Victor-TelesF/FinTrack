@@ -1,258 +1,175 @@
-markdown
-<p align="center">
-<img src="https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=white" />
-  <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" />
-  <img src="https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white" />
-  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
-  <a href="https://github.com/Victor-TelesF/fintrack/actions/workflows/ci.yml">
-    <img src="https://github.com/Victor-TelesF/fintrack/actions/workflows/ci.yml/badge.svg" />
-  </a>
-  <!-- Se o arquivo não se chamar ci.yml, troca o caminho acima pelo nome real do arquivo em .github/workflows/ -->
-  <img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" />
-</p>
-
-<h1 align="center">🏦 FinTrack API</h1>
+<h1 align="center">FinTrack</h1>
 
 <p align="center">
-    <b>API REST para consolidar rentabilidade de ativos diferentes numa única carteira</b><br>
-  CDBs indexados ao CDI, Tesouro Selic/IPCA+, ações, FIIs e cripto — cada um com sua própria fórmula de retorno, tratados de forma unificada.
+  <strong>Do histórico de investimentos a uma visão clara da carteira.</strong><br>
+  API para registrar compras e vendas, acompanhar posições e avaliar patrimônio por moeda.
 </p>
 
 <p align="center">
-  <a href="https://fintrack-ye2t.onrender.com/docs"><b>🔗 API rodando ao vivo — Swagger interativo</b></a>
+  <img alt="Python 3.13" src="https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white">
+  <img alt="FastAPI" src="https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white">
+  <img alt="PostgreSQL" src="https://img.shields.io/badge/Database-PostgreSQL-4169E1?logo=postgresql&logoColor=white">
+  <a href="LICENSE"><img alt="Licença MIT" src="https://img.shields.io/badge/License-MIT-blue"></a>
 </p>
-
-<!--
-Opcional: GIF curto (5-10s) mostrando login → POST /portfolios/buy → GET /portfolios/summary
-gravado a partir do link acima. Ferramentas: Peek (Linux), ScreenToGif (Windows).
--->
 
 <p align="center">
-  <a href="#-como-executar">Como rodar</a> ·
-  <a href="#-endpoints-principais">Endpoints</a> ·
-  <a href="#-decisões-de-engenharia">Decisões técnicas</a> ·
-  <a href="#-o-que-aprendi">O que aprendi</a>
+  <a href="https://fintrack-ye2t.onrender.com/docs">API publicada</a> ·
+  <a href="#comece-por-aqui">Executar localmente</a> ·
+  <a href="docs/api.md">Contratos da API</a> ·
+  <a href="CONTRIBUTING.md">Contribuir</a>
 </p>
 
----
+> **Estado da entrega:** a versão anterior já está publicada no Render e atende um frontend existente. Esta atualização implementa persistência assíncrona e avaliação v2 com cotações. O frontend pode continuar nas rotas atuais e adotar a v2 depois. O Swagger do ambiente publicado representa a versão implantada, que pode diferir desta branch.
 
-## 📌 Por que este projeto existe
+## O que o projeto faz
 
-Consolidar uma carteira com CDB, Tesouro e ações num só número de rentabilidade não é trivial: cada tipo de ativo calcula retorno de um jeito diferente (indexador × taxa, valorização de cota + dividendo, ganho de capital simples). Tratar tudo com `if/else` funciona até o terceiro tipo de ativo — depois disso vira uma fonte constante de bugs cada vez que um indexador novo entra.
+O FinTrack organiza o que uma pessoa comprou, vendeu e ainda possui. A partir desse histórico, calcula quantidade, preço médio, custo da posição e resultado em relação ao preço usado na avaliação.
 
-O FinTrack é minha resposta a esse problema: uma API onde cada classe de ativo sabe calcular o próprio retorno, e adicionar um indexador novo não exige tocar em nada que já existe e já está testado.
+| Você quer saber… | O FinTrack entrega |
+|---|---|
+| Quais investimentos ainda tenho? | Posições abertas reconstruídas a partir das compras e vendas. |
+| Quanto paguei pelas unidades que mantenho? | Quantidade, preço médio e custo da posição. |
+| Quanto essa posição vale na avaliação? | Quantidade × cotação de mercado ou preço cadastrado identificado. |
+| Qual é a diferença em relação ao custo? | P&L: lucro ou prejuízo **não realizado** das posições abertas. |
+| Tenho investimentos em moedas diferentes? | Totais separados por moeda, sem somar reais e dólares. |
 
----
+O catálogo comporta ações brasileiras e internacionais, fundos imobiliários (FIIs), criptomoedas, CDBs e títulos públicos. **Cotações externas estão disponíveis nesta versão para ações brasileiras e FIIs configurados na brapi.** Os demais ativos usam avaliação manual, com moeda definida.
 
-## 🛠️ Stack
+## Entenda com um exemplo
 
-| Camada | Tecnologia | Por que |
-|--------|-----------|---------|
-| API | FastAPI + Uvicorn | Tipagem nativa via Pydantic, docs automáticas |
-| Persistência | PostgreSQL + SQLAlchemy 2.0 + Alembic | ORM tipado, migrations versionadas |
-| Autenticação | python-jose + pwdlib | JWT stateless, hash de senha com salt |
-| Dependências | uv + pyproject.toml + uv.lock | Ambiente reproduzível com dependências de desenvolvimento separadas |
-| Testes | pytest + httpx | Unitários de domínio + integração via API |
-| Infra | Docker Compose | Ambiente reproduzível |
+Uma compra fictícia de **10 unidades a R$ 30,00** tem custo de **R$ 300,00**. Se o preço usado na avaliação for **R$ 35,00**, a posição vale **R$ 350,00**: diferença de **R$ 50,00**, aproximadamente **16,67%**.
 
----
-
-## 🏗️ Arquitetura
-
-Regra que segui do início ao fim: `domain/` (Python puro, sem framework) nunca importa nada de `app/` (FastAPI, SQLAlchemy). A dependência é sempre numa direção só.
-
-```text
-fintrack/
-├── domain/          # Regras de negócio, zero dependência externa
-│   ├── assets/       # Hierarquia de ativos e cálculo de retorno
-│   ├── portfolio/     # Transaction, Position, Portfolio
-│   └── strategies/    # Uma classe por indexador (CDI, IPCA, Selic, Prefixado)
-├── app/              # FastAPI, banco, autenticação
-│   ├── routers/        # Endpoints
-│   ├── service/          # Regras de aplicação (orquestra domínio + banco)
-│   ├── models/            # SQLAlchemy
-│   └── mappers/            # Converte ORM ↔ domínio
-├── alembic/          # Migrations
-└── tests/            # domain/ testado sem banco nenhum; app/ testado via API
+```mermaid
+flowchart LR
+    A["Compra registrada<br/>10 × R$ 30,00"] --> B["Custo da posição<br/>R$ 300,00"]
+    C["Preço da avaliação<br/>R$ 35,00 por unidade"] --> D["Valor da posição<br/>R$ 350,00"]
+    B --> E["Resultado não realizado<br/>+ R$ 50,00"]
+    D --> E
 ```
 
-**Por que separar assim:** a suíte de testes do domínio inteiro roda sem subir Postgres — dá pra validar toda a lógica de cálculo de rentabilidade em milissegundos, sem depender de infraestrutura.
+O preço original da compra permanece no histórico. Uma cotação nova muda a avaliação, não reescreve a transação.
 
-```text
-Asset (ABC)
-├── FixedIncome (ABC) ── CDB, GovernmentBond
-└── VariableIncome (ABC) ── Stock (NationalStock, InternationalStock), RealEstateFund, Cryptocurrency
-```
+| Conceito | Significado no projeto |
+|---|---|
+| **Preço da transação** | Valor informado em uma compra ou venda. |
+| **Preço cadastrado** | Referência manual armazenada no catálogo do ativo. |
+| **Cotação** | Preço obtido do provedor, acompanhado de fonte, moeda e horários. |
+| **Posição** | Quantidade de um ativo que ainda permanece na carteira. |
+| **Cache** | Reutilização temporária de uma cotação para evitar consultas externas repetidas. |
 
----
+As leituras atuais usam preços cadastrados. As leituras v2 usam a fonte configurada e informam quando a avaliação é manual. Cotações podem ter atraso e ser reutilizadas do cache; o projeto não promete preços em tempo real.
 
-## 🧠 Decisões de Engenharia
+## Comece por aqui
 
-Em vez de listar padrões pelo nome, aqui está o problema que cada um resolveu de fato:
-
-| Problema real | Decisão | Sem isso... |
-|---|---|---|
-| Cada indexador (CDI, IPCA, Selic, taxa fixa) calcula retorno com uma fórmula diferente, e novos indexadores vão continuar aparecendo | Strategy Pattern: uma classe por fórmula, escolhida via registry | Toda vez que um indexador novo entrasse, eu precisaria editar um `if/elif` gigante e arriscar quebrar os já existentes |
-| Preço médio e quantidade da carteira podem ficar dessincronizados do histórico de transações se forem guardados como colunas separadas | `Position` recalcula tudo a partir da lista de transações, em memória | Um bug de update em background podia deixar o preço médio mostrado errado sem nenhum erro visível |
-| O domínio precisa buscar preço de mercado, mas não pode depender de como esse preço é obtido (banco hoje, API externa amanhã) | `PriceSource` como `Protocol` — o domínio só conhece a interface | Trocar a fonte de preço exigiria reescrever a lógica de cálculo de P&L, não só a integração |
-| Cada tipo de ativo tem colunas próprias (CDB tem `fgc_covered`, ação tem `currency`), mas todos compartilham `name`/`ticker`/`current_price` | Joined Table Inheritance no SQLAlchemy | Ou eu teria uma tabela com dezenas de colunas `NULL` pra maioria das linhas, ou duplicaria os campos comuns em cada tabela |
-
----
-
-## 💻 Exemplo de uso
-
-A camada de domínio funciona isolada — sem banco, sem servidor HTTP:
-
-```python
-from decimal import Decimal
-from datetime import date
-from domain.assets.variable_income import NationalStock
-from domain.portfolio.portfolio import Portfolio
-
-petr4 = NationalStock(name="Petrobras", ticker="PETR4", current_price=Decimal("35.50"))
-portfolio = Portfolio(wallet_id="user-123")
-
-portfolio.buy(asset=petr4, quantity=Decimal("100"), price=Decimal("30.00"), buy_date=date(2026, 1, 5))
-
-print(portfolio.positions["PETR4"].average_price)  # 30.00
-```
-
----
-
-## ✅ Testes
-
-```bash
-uv sync --locked
-uv run --locked pytest tests/domain -q # domínio, sem banco
-uv run --locked pytest -q              # suíte completa, com PostgreSQL de testes
-```
-
-Para os testes de integração, crie um banco PostgreSQL exclusivo de testes e configure suas credenciais em `.env.test` (use `.env.example` como referência). Ao executar localmente, use `POSTGRES_HOST=localhost`. As fixtures criam e removem tabelas nesse banco a cada teste; não use o banco da aplicação. Variáveis de ambiente têm precedência sobre os arquivos `.env`, como no CI.
-
-176 testes, a maioria de domínio (sem banco) e o resto cobrindo a aplicação, incluindo integração via API. CI no GitHub Actions roda a suíte a cada push/PR contra um Postgres real em container, aplicando as migrations do zero antes de testar — não é só um lint, é a suíte completa validando contra o schema real do banco.
-
-**Um bug real que a suíte pegou:** minha primeira versão de `average_price` processava as transações na ordem em que chegavam no banco. Um teste de regressão simulou uma venda entre duas compras da mesma ação e o preço médio deu errado — porque a venda "resetava" o cálculo em vez de simplesmente reduzir a quantidade sem afetar o preço médio. A correção foi ordenar sempre por `transaction_date` antes de calcular, nunca confiar na ordem de inserção. Ficou como teste de regressão (`test_sell_between_two_buys_does_not_corrupt_average`) pra nunca mais quebrar silenciosamente.
-
-### Histórico de correção: venda bloqueada com saldo disponível (23/09/2026)
-
-Durante um teste pelo frontend, uma compra com preço informado manualmente seguida de uma tentativa de venda por outro preço retornou **"Não é possivel vender mais do que possui"**, mesmo havendo quantidade disponível. A investigação reproduziu uma falha em operações com a mesma data; a diferença entre os preços não era a causa.
-
-O problema estava no desempate da ordenação: transações já salvas tinham uma `transaction_sequence` gerada pelo banco e compartilhada entre carteiras, enquanto a operação nova, ainda sem sequência, usava seu índice na lista da posição. Esses números não representavam a mesma ordem. Por exemplo, uma compra salva com sequência `100` podia ficar depois de uma venda nova com índice `1`, fazendo a validação tentar vender antes de contabilizar a compra.
-
-A correção em [`Position`](domain/portfolio/position.py) mantém a data como primeiro critério e, dentro do mesmo dia, processa as transações persistidas pela sequência antes das novas, que mantêm sua ordem de inclusão. A regra vale tanto para validar o saldo quanto para calcular o preço médio. Vendas acima da quantidade disponível ou anteriores à compra continuam bloqueadas.
-
-Foram adicionados [testes de regressão no domínio](tests/domain/test_position.py) para vendas parciais e totais com preços menores, iguais e maiores que o de compra, preservação do saldo após uma venda inválida e preço médio de uma nova compra após uma venda no mesmo dia. O [teste da API](tests/app/routers/test_portfolio_router.py) também passou a incluir operações de outra carteira para exercitar a sequência compartilhada. Na validação local desta correção, os **125 testes de domínio passaram**; a execução dos testes HTTP ficou pendente porque o PostgreSQL de testes estava indisponível.
-
-Na validação posterior da migração para uv, a suíte completa foi executada contra um PostgreSQL 15 temporário: **176 testes passaram**, incluindo o teste HTTP dessa correção.
-
----
-
-## 🚀 Como Executar
-
-### Desenvolvimento local com uv
-
-Instale o [uv](https://docs.astral.sh/uv/getting-started/installation/) e, na raiz do projeto, execute:
-
-```bash
-uv sync --locked
-cp .env.example .env
-# Configure o PostgreSQL e as chaves no .env; fora do Docker, use POSTGRES_HOST=localhost.
-uv run --locked alembic upgrade head
-uv run --locked uvicorn app.main:app --reload
-```
-
-O PostgreSQL precisa estar disponível antes de aplicar as migrations. A versão de Python usada é a 3.13, definida em `.python-version`. O `uv sync` cria e sincroniza a `.venv`, incluindo o grupo `dev`; não é necessário ativá-la para usar `uv run`.
-
-As dependências da aplicação ficam em `[project.dependencies]` no `pyproject.toml`, e as ferramentas de teste ficam em `[dependency-groups].dev`. O `uv.lock` registra as versões resolvidas, incluindo dependências indiretas. Ambos devem ser versionados; a `.venv` continua fora do Git. As configurações do pytest também ficam no `pyproject.toml`.
-
-```bash
-uv add nome-do-pacote       # dependência da aplicação
-uv add --dev nome-do-pacote # ferramenta de desenvolvimento
-uv remove nome-do-pacote    # remove uma dependência
-uv sync --locked           # instala conforme o lockfile, sem atualizá-lo
-```
-
-O projeto migrou de `pip` e `requirements.txt` para `uv`, preservando as versões das bibliotecas necessárias que estavam instaladas. O `requirements.txt` foi substituído pelo `pyproject.toml` e pelo `uv.lock`; novas dependências devem ser gerenciadas com os comandos acima. A aplicação continua sendo executada a partir da raiz, mantendo os diretórios `app/` e `domain/`.
-
-### Execução com Docker
-
-#### Pré-requisitos
-- [Docker](https://docs.docker.com/get-docker/) e Docker Compose
-- [Git](https://git-scm.com/)
+Requisitos: Git, Docker e Docker Compose. A porta 8000 deve estar disponível; o Compose de desenvolvimento também publica o PostgreSQL na porta 5432.
 
 ```bash
 git clone https://github.com/Victor-TelesF/fintrack.git
 cd fintrack
-cp .env.example .env   # edite com suas credenciais do Postgres
+cp .env.example .env
+```
+
+Edite `.env`: defina as chaves de autenticação/administração e as credenciais locais do banco. No Compose, mantenha `POSTGRES_HOST=db`. `BRAPI_TOKEN` pode ficar vazio para explorar os fluxos legados e avaliações manuais; para consultar mercado, use a chave da brapi **sem** o prefixo `Bearer`.
+
+```bash
 docker compose up --build
 ```
 
-O Docker instala apenas as dependências da aplicação com `uv sync --locked --no-dev`. O ambiente virtual fica em `/opt/venv`, separado do volume do código em `/app` e da `.venv` local. O `start.sh` usa os executáveis desse ambiente pelo `PATH`, aplica as migrations e inicia a API. O CI usa `uv sync --locked` e executa migrations e testes com `uv run --locked`. Docker e CI fixam a versão do uv em `0.12.3`.
+Abra [localhost:8000/docs](http://localhost:8000/docs). A inicialização aplica as migrations automaticamente.
 
-- API: `http://localhost:8000`
-- Docs interativas: `http://localhost:8000/docs`
+Para experimentar no Swagger local:
 
-Para aplicar migrations manualmente:
+1. Cadastre um usuário em `POST /auth/register` e faça login em `POST /auth/login`.
+2. Use o `access_token` como `Authorization: Bearer <token>` nas chamadas autenticadas. O login recebe JSON; veja o [exemplo com curl](docs/api.md#autenticação).
+3. Cadastre ativos em `POST /admin/assets`, enviando a chave local no header `X-Admin-Key`.
+4. Registre uma compra e consulte posições, histórico e resumo.
+
+Use dados fictícios no ambiente de demonstração. A chave administrativa pertence ao operador do backend.
+
+<details>
+<summary><strong>Executar com Python e uv</strong></summary>
+
+Com Python 3.13, uv e PostgreSQL disponíveis, configure `.env` com o host acessível pelo seu terminal — normalmente `localhost`, quando o banco roda localmente.
+
 ```bash
-docker compose exec web alembic upgrade head
+uv sync --locked
+uv run --locked alembic upgrade head
+uv run --locked uvicorn app.main:app --reload
 ```
 
-🔗 **Ambiente ao vivo (sem precisar rodar nada):** [fintrack-ye2t.onrender.com/docs](https://fintrack-ye2t.onrender.com/docs) — Swagger interativo, dá pra testar os endpoints direto no navegador. *(Plano free do Render: se ninguém acessou nos últimos minutos, o primeiro request pode levar ~30s pra "acordar" o serviço.)*
+As dependências são definidas em `pyproject.toml` e fixadas em `uv.lock`. Para adicionar uma biblioteca, use `uv add`; para ferramentas de desenvolvimento, `uv add --dev`.
 
----
+</details>
 
-## 📋 Endpoints principais
+## API e compatibilidade
 
-| Método | Endpoint | Autenticação |
-|--------|----------|--------------|
-| `POST` | `/auth/register` | Não |
-| `POST` | `/auth/login` | Não |
-| `GET` | `/assets` | JWT |
-| `POST` | `/admin/assets` | `X-Admin-Key` |
-| `GET` | `/portfolios` | JWT |
-| `POST` | `/portfolios/buy` | JWT |
-| `POST` | `/portfolios/sell` | JWT |
-| `GET` | `/portfolios/positions` | JWT |
-| `GET` | `/portfolios/summary` | JWT |
+| Fluxo | Rotas principais | Acesso |
+|---|---|---|
+| Conta | `POST /auth/register`, `POST /auth/login` | Público, com limite de requisições |
+| Catálogo | `GET /assets`, `GET /assets/{asset_id}` | JWT |
+| Administração | `POST /admin/assets` | `X-Admin-Key` |
+| Operações | `POST /portfolios/buy`, `POST /portfolios/sell` | JWT |
+| Histórico | `GET /portfolios/transactions` | JWT |
+| Avaliação atual | `GET /portfolios/positions`, `GET /portfolios/summary` | JWT; preço cadastrado |
+| Avaliação v2 | `GET /api/v2/portfolios/positions`, `GET /api/v2/portfolios/summary` | JWT; fonte e totais por moeda |
 
-Exemplo de compra:
-```json
-{
-  "ticker": "PETR4",
-  "quantity": "10",
-  "price": "35.50",
-  "transaction_date": "2026-08-01"
-}
+Valores monetários são serializados como strings decimais. As respostas v2 distinguem preço cadastrado de cotação, identificam avaliações manuais e incluem os preços usados nos totais. Falhas de configuração ou de cotação retornam erros explícitos, sem apresentar totais parciais como completos.
+
+Consulte [exemplos, campos e erros](docs/api.md) e o [roteiro de atualização do backend e frontend](docs/operacao.md).
+
+## Como funciona por dentro
+
+```mermaid
+flowchart TD
+    UI["Frontend ou cliente HTTP"] --> API["FastAPI<br/>autenticação e contratos"]
+    API --> S["Serviços de aplicação<br/>coordenam cada operação"]
+    S --> DB[("PostgreSQL<br/>usuários, ativos e transações")]
+    S --> D["Domínio Python<br/>saldo, preço médio e resultado"]
+    S --> Q["Serviço de cotações<br/>cache e consultas compartilhadas"]
+    Q --> P["brapi<br/>ações brasileiras e FIIs"]
 ```
 
-Valores financeiros trafegam como strings decimais (evita perda de precisão no JSON/JavaScript). Erros seguem `{ "detail": "mensagem" }`, com `401`/`403`/`404`/`409`/`422` conforme o caso.
+| Decisão | Benefício |
+|---|---|
+| Domínio independente de FastAPI e SQLAlchemy | Regras financeiras podem ser testadas sem banco ou servidor. |
+| `Decimal` nos cálculos | Evita usar ponto flutuante binário como representação dos valores financeiros. |
+| SQLAlchemy async e HTTPX | I/O de banco e provedor assíncrono; cálculos do domínio permanecem síncronos. |
+| Histórico como origem das posições | Quantidade e preço médio são reconstruídos a partir das transações. |
+| Lock por carteira nas operações | Serializa escritas concorrentes para proteger o saldo disponível. |
+| Cache limitado e deduplicação de buscas | Reduz chamadas repetidas ao provedor dentro do mesmo processo. |
+| Migrations Alembic e `uv.lock` | Versiona o schema e fixa as dependências da aplicação. |
 
----
+```text
+app/          API, autenticação, persistência e integração de cotações
+domain/       ativos, carteira, transações e estratégias de cálculo
+alembic/      evolução do banco de dados
+tests/        domínio, contratos HTTP, integração, migrations e cotações
+scripts/      verificações controladas da integração e da imagem
+docs/         contratos e operação
+```
 
-## 🎓 O que Aprendi
+## Qualidade e limites
 
-- **`Decimal`, nunca `float`, em cálculo financeiro.** Erro de arredondamento silencioso em dinheiro é o tipo de bug que só aparece em produção, meses depois.
-- **Testar domínio isolado antes de integrar economiza tempo de debug.** Achar o bug de preço médio num teste unitário de domínio levou minutos; achar o mesmo bug via API, com banco no meio, teria levado muito mais.
-- **Ordem cronológica de eventos de negócio não pode depender de ordem de inserção no banco.** Parece óbvio escrito assim, mas só ficou óbvio depois do bug acima.
-- **Usei assistentes de IA (Claude Code, com revisão via GPT/Kimi) para partes de infraestrutura mais mecânicas** — rotas, mappers ORM, migrations — sempre a partir de uma spec que eu escrevi antes e revisando o código gerado linha a linha. Aprendi que isso acelera a digitação, mas não substitui entender o problema: mais de uma vez rejeitei uma "correção" sugerida porque ela escondia o sintoma em vez de resolver a causa.
-- Ainda não sei se a modelagem de domínio que fiz aqui aguenta bem, por exemplo, ativos com múltiplas moedas de forma limpa — é uma pergunta em aberto que quero investigar.
+Na validação local de **01/10/2026**, **324 testes passaram** com PostgreSQL 15. A suíte cobre regras de domínio, compatibilidade HTTP, rollback, concorrência, migrations, cache e falhas de cotações simuladas. O CI contém um job de testes e outro para a imagem de produção, com fluxo HTTP e encerramento gracioso. Esse resultado local não representa uma execução remota do workflow.
 
----
+```bash
+uv run --locked pytest tests/domain -q
+```
 
-## 📋 Próximos Passos
+Para executar a suíte completa, use **um banco exclusivo de testes**: as fixtures criam e removem tabelas. Veja [como validar e contribuir](CONTRIBUTING.md).
 
-- [ ] Migrar o backend para async (SQLAlchemy async engine, rotas e services assíncronos)
-- [ ] Substituir a fonte de preço atual (lida do próprio banco) por um provedor de mercado real
+Limites desta versão:
 
----
+- P&L cobre posições abertas; não inclui dividendos, lucro realizado ou impostos.
+- Não há conversão cambial nem total que misture moedas.
+- Cotações externas não cobrem cripto, ações internacionais ou renda fixa nesta entrega. As estratégias de renda fixa do domínio não equivalem a uma atualização automática do valor desses ativos na API.
+- Ativos antigos podem precisar de revisão de moeda e mapeamento antes de usar as leituras v2.
+- Cache e limites de requisições são locais ao processo; a configuração inicial considera uma réplica.
 
-## 🤝 Contato
+## Documentação e contribuição
 
-[@Victor_TelesF](https://github.com/Victor-TelesF)
-<!-- TODO: adicionar link do LinkedIn -->
+- [Contratos da API](docs/api.md): autenticação, cadastro, compra, avaliação e erros.
+- [Operação e atualização](docs/operacao.md): configuração, Render, migrations, frontend e retorno.
+- [Guia de contribuição](CONTRIBUTING.md): testes, microcommits e o que deve entrar no GitHub.
 
----
-
-## 📝 Licença
-
-MIT. Veja [`LICENSE`](LICENSE).
+Desenvolvido por [Victor Teles](https://github.com/Victor-TelesF). Distribuído sob a [licença MIT](LICENSE).
