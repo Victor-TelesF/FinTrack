@@ -43,7 +43,7 @@ def get_auth_service(
     return AuthService(db, password_handler, token_handler)
 
 
-def get_asset_service(db: Session = Depends(get_sync_db)) -> AssetService:
+def get_asset_service(db: AsyncSession = Depends(get_db)) -> AssetService:
     return AssetService(db)
 
 

@@ -1,7 +1,10 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from app.price_sources.exceptions import QuoteConfigurationError, QuoteUnavailableError
 from .exceptions import (
     AssetAlreadyExistsError,
+    AssetCurrencyLockedError,
+    InvalidAssetQuoteMetadataError,
     AssetNotFoundError,
     InvalidAdminKeyError,
     InvalidCredentialsError,
@@ -13,6 +16,26 @@ from .exceptions import (
 
 
 def register_exception_handlers(app: FastAPI) -> None:
+
+    @app.exception_handler(QuoteConfigurationError)
+    async def handle_quote_configuration(request: Request, exc: QuoteConfigurationError):
+        return JSONResponse(status_code=422, content={
+            "detail": str(exc), "asset_ids": [str(asset_id) for asset_id in exc.asset_ids],
+        })
+
+    @app.exception_handler(QuoteUnavailableError)
+    async def handle_quote_unavailable(request: Request, exc: QuoteUnavailableError):
+        return JSONResponse(status_code=503, content={
+            "detail": str(exc), "asset_ids": [str(asset_id) for asset_id in exc.failures],
+        })
+
+    @app.exception_handler(InvalidAssetQuoteMetadataError)
+    def handle_invalid_asset_metadata(request: Request, exc: InvalidAssetQuoteMetadataError):
+        return JSONResponse(status_code=422, content={"detail": str(exc)})
+
+    @app.exception_handler(AssetCurrencyLockedError)
+    def handle_asset_currency_locked(request: Request, exc: AssetCurrencyLockedError):
+        return JSONResponse(status_code=409, content={"detail": str(exc)})
 
     @app.exception_handler(InvalidCredentialsError)
     def handle_invalid_credentials(request: Request, exc: InvalidCredentialsError):
