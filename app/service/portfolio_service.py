@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from uuid import UUID
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -18,6 +19,10 @@ from domain.enums import TransactionType
 from domain.exceptions import FinTrackError
 from domain.portfolio.portfolio import Portfolio
 from app.price_source import InMemoryPriceSource
+from app.price_sources.exceptions import QuoteConfigurationError
+from app.price_sources.types import PriceRequest, Quote
+from app.schemas.valuation_schema import ValuationAssetRead
+from app.service.quote_service import QuoteService
 
 
 portfolio_asset = with_polymorphic(AssetModel, "*", flat=True)
@@ -116,6 +121,64 @@ class PortfolioService:
             "total_equity": total_equity,
             "total_pnl": total_pnl,
             "return_percentage": (total_pnl / total_cost * 100) if total_cost else 0,
+        }
+
+    async def market_positions(self, user_id: UUID, quote_service: QuoteService):
+        positions, assets = await self._load_positions(user_id)
+        requests = []
+        quotes = {}
+        invalid = []
+        fetched_at = datetime.now(timezone.utc)
+        for ticker in positions:
+            asset = assets[ticker]
+            if asset.quote_currency not in {"BRL", "USD", "EUR"}:
+                invalid.append(asset.id)
+            elif asset.price_provider == "brapi":
+                if (asset.type_column not in {"national_stock", "real_estate_fund"}
+                        or asset.quote_currency != "BRL" or not asset.external_price_id):
+                    invalid.append(asset.id)
+                else:
+                    requests.append(PriceRequest(
+                        asset.id, "brapi", asset.external_price_id, asset.quote_currency,
+                    ))
+            elif asset.price_provider in {None, "manual"} and asset.external_price_id is None:
+                quotes[asset.id] = Quote(
+                    asset_id=asset.id, price=asset.current_price,
+                    currency=asset.quote_currency, source="manual",
+                    quoted_at=None, fetched_at=fetched_at, from_cache=False,
+                )
+            else:
+                invalid.append(asset.id)
+        if invalid:
+            raise QuoteConfigurationError(invalid)
+        if requests:
+            quotes.update(await quote_service.get_quotes(requests))
+        result = []
+        for ticker, position in positions.items():
+            asset = assets[ticker]
+            quote = quotes[asset.id]
+            values = self._value_position(position, quote.price)
+            values.pop("current_price")  # The v2 evaluation price lives in quote.price.
+            result.append({
+                "asset": ValuationAssetRead.model_validate(asset),
+                **values, "currency": quote.currency, "quote": quote,
+            })
+        return result
+
+    async def market_summary(self, user_id: UUID, quote_service: QuoteService):
+        # One snapshot supplies every subtotal and its quote metadata.
+        positions = await self.market_positions(user_id, quote_service)
+        groups = {}
+        for position in positions:
+            groups.setdefault(position["currency"], []).append(position)
+        return {
+            "totals_by_currency": [
+                {"currency": currency, **self._summarize(items),
+                 "contains_manual_prices": any(item["quote"].source == "manual" for item in items)}
+                for currency, items in sorted(groups.items())
+            ],
+            "contains_manual_prices": any(item["quote"].source == "manual" for item in positions),
+            "quotes": [item["quote"] for item in positions],
         }
 
     async def add_transaction(

@@ -1,6 +1,6 @@
 from collections.abc import AsyncIterator
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from .database import AsyncSessionLocal
@@ -9,10 +9,14 @@ from .auth import PasswordHandler, TokenHandler
 from .service import AuthService
 from .service.asset_service import AssetService
 from .service.portfolio_service import PortfolioService
+from .service.quote_service import QuoteService
 from .models import UserModel
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
+
+def get_quote_service(request: Request) -> QuoteService:
+    return request.app.state.quote_service
 
 async def get_db() -> AsyncIterator[AsyncSession]:
     async with AsyncSessionLocal() as db:
