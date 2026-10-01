@@ -66,9 +66,9 @@ def login_rate_limit(request: Request, credentials: UserLogin) -> None:
 
 
 @router.post("/register", response_model=UserRead, dependencies=[Depends(register_rate_limit)])
-def register(user_data: UserCreate, service: AuthService = Depends(get_auth_service)):
-    return service.register(user_data)
+async def register(user_data: UserCreate, service: AuthService = Depends(get_auth_service)):
+    return await service.register(user_data)
 
 @router.post("/login", response_model=TokenRead, dependencies=[Depends(login_rate_limit)])
-def login(credentials: UserLogin, service: AuthService = Depends(get_auth_service)):
-    return service.login(credentials)
+async def login(credentials: UserLogin, service: AuthService = Depends(get_auth_service)):
+    return await service.login(credentials)

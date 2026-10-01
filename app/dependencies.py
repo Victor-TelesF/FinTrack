@@ -1,7 +1,10 @@
+from collections.abc import AsyncIterator
+
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
-from .database import SessionLocal
+from .database import AsyncSessionLocal, SessionLocal
 from .config import settings
 from .auth import PasswordHandler, TokenHandler
 from .service import AuthService
@@ -11,12 +14,16 @@ from .models import UserModel
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
-def get_db():
-    db = SessionLocal()
-    try:
+
+async def get_db() -> AsyncIterator[AsyncSession]:
+    async with AsyncSessionLocal() as db:
         yield db
-    finally:
-        db.close()
+
+
+def get_sync_db():
+    with SessionLocal() as db:
+        yield db
+
 
 def get_password_handler() -> PasswordHandler:
     return PasswordHandler()
@@ -29,21 +36,22 @@ def get_token_handler() -> TokenHandler:
     )
 
 def get_auth_service(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     password_handler: PasswordHandler = Depends(get_password_handler),
     token_handler: TokenHandler = Depends(get_token_handler),
 ) -> AuthService:
     return AuthService(db, password_handler, token_handler)
 
 
-def get_asset_service(db: Session = Depends(get_db)) -> AssetService:
+def get_asset_service(db: Session = Depends(get_sync_db)) -> AssetService:
     return AssetService(db)
 
 
-def get_portfolio_service(db: Session = Depends(get_db)) -> PortfolioService:
+def get_portfolio_service(db: Session = Depends(get_sync_db)) -> PortfolioService:
     return PortfolioService(db)
 
-def get_current_user(user_credential: AuthService = Depends(get_auth_service), 
-                     token: str = Depends(oauth2_scheme)) -> UserModel:
-    
-    return user_credential.get_auth_user(token)
+async def get_current_user(
+    user_credential: AuthService = Depends(get_auth_service),
+    token: str = Depends(oauth2_scheme),
+) -> UserModel:
+    return await user_credential.get_auth_user(token)
