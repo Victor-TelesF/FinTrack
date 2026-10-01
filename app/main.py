@@ -1,10 +1,21 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .config import settings
+from .database import async_engine
 from .routers import admin_router, asset_router, auth_router, portfolio_router
 from .errors import register_exception_handlers
 
-app = FastAPI(title="FinTrack API")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        yield
+    finally:
+        await async_engine.dispose()
+
+
+app = FastAPI(title="FinTrack API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
