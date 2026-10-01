@@ -123,9 +123,17 @@ celerybeat.pid
 # SageMath parsed files
 *.sage.py
 
-# Environments
+# Local credentials (only the sanitized example is public)
 .env
-.env.test
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Environments
 .venv
 env/
 venv/
@@ -174,10 +182,37 @@ poetry.toml
 # LSP config files
 pyrightconfig.json
 
-# PostgreSQL
+# Database exports and local data
 *.sql
+*.dump
+*.backup
+*.db
+*.sqlite
+*.sqlite3
+backups/
+dumps/
 
 # Docker - Dados do Banco
 postgres_data/
+
+# Editor, operating system and local assistant state
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.tmp
+*.bak
+.agents/
+.codex/
+/AGENTS.md
+
+# Local planning and session records; public guides in docs/ remain versioned
+/docs/continuidade-v2-async-prices.md
+/docs/plano-v2-async-prices.md
+/docs/etapa-*.md
+/docs/entrega-v2-async-prices.md
+/docs/verificacao-render.md
 
 # End of https://www.toptal.com/developers/gitignore/api/python
