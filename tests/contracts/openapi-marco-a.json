@@ -1,0 +1,1090 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FinTrack API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Register",
+        "operationId": "register_auth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login",
+        "operationId": "login_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserLogin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/assets": {
+      "get": {
+        "tags": [
+          "assets"
+        ],
+        "summary": "List Assets",
+        "operationId": "list_assets_assets_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AssetCatalogRead"
+                  },
+                  "type": "array",
+                  "title": "Response List Assets Assets Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/assets/{asset_id}": {
+      "get": {
+        "tags": [
+          "assets"
+        ],
+        "summary": "Get Asset",
+        "operationId": "get_asset_assets__asset_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "asset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Asset Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetCatalogRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/portfolios": {
+      "get": {
+        "tags": [
+          "portfolios"
+        ],
+        "summary": "List Portfolios",
+        "operationId": "list_portfolios_portfolios_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PortfolioRead"
+                  },
+                  "type": "array",
+                  "title": "Response List Portfolios Portfolios Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/portfolios/buy": {
+      "post": {
+        "tags": [
+          "portfolios"
+        ],
+        "summary": "Buy Asset",
+        "operationId": "buy_asset_portfolios_buy_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransactionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/portfolios/sell": {
+      "post": {
+        "tags": [
+          "portfolios"
+        ],
+        "summary": "Sell Asset",
+        "operationId": "sell_asset_portfolios_sell_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransactionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/portfolios/transactions": {
+      "get": {
+        "tags": [
+          "portfolios"
+        ],
+        "summary": "List User Transactions",
+        "operationId": "list_user_transactions_portfolios_transactions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TransactionRead"
+                  },
+                  "type": "array",
+                  "title": "Response List User Transactions Portfolios Transactions Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/portfolios/positions": {
+      "get": {
+        "tags": [
+          "portfolios"
+        ],
+        "summary": "List Positions",
+        "operationId": "list_positions_portfolios_positions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PositionRead"
+                  },
+                  "type": "array",
+                  "title": "Response List Positions Portfolios Positions Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/portfolios/summary": {
+      "get": {
+        "tags": [
+          "portfolios"
+        ],
+        "summary": "Get Summary",
+        "operationId": "get_summary_portfolios_summary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioSummaryRead"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/portfolios/{portfolio_id}/transactions": {
+      "get": {
+        "tags": [
+          "portfolios"
+        ],
+        "summary": "List Transactions",
+        "operationId": "list_transactions_portfolios__portfolio_id__transactions_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "portfolio_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Portfolio Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TransactionRead"
+                  },
+                  "title": "Response List Transactions Portfolios  Portfolio Id  Transactions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/assets": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Upsert Assets",
+        "operationId": "upsert_assets_admin_assets_post",
+        "parameters": [
+          {
+            "name": "x-admin-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminAssetUpsertRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AssetCatalogRead"
+                  },
+                  "title": "Response Upsert Assets Admin Assets Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AdminAssetItem": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "cdb",
+              "government_bond",
+              "national_stock",
+              "international_stock",
+              "real_estate_fund",
+              "cryptocurrency"
+            ],
+            "title": "Type"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "current_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Current Price"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate"
+          },
+          "maturity_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maturity Date"
+          },
+          "fgc_covered": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fgc Covered"
+          },
+          "liquidity_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LiquidityType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "index_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IndexType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "bond_index_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BondIndexType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "name",
+          "ticker",
+          "current_price"
+        ],
+        "title": "AdminAssetItem"
+      },
+      "AdminAssetUpsertRequest": {
+        "properties": {
+          "assets": {
+            "items": {
+              "$ref": "#/components/schemas/AdminAssetItem"
+            },
+            "type": "array",
+            "title": "Assets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "assets"
+        ],
+        "title": "AdminAssetUpsertRequest"
+      },
+      "AssetBaseRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "current_price": {
+            "type": "string",
+            "title": "Current Price"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "ticker",
+          "current_price"
+        ],
+        "title": "AssetBaseRead"
+      },
+      "AssetCatalogRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "current_price": {
+            "type": "string",
+            "title": "Current Price"
+          },
+          "asset_type": {
+            "type": "string",
+            "title": "Asset Type"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate"
+          },
+          "maturity_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maturity Date"
+          },
+          "fgc_covered": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fgc Covered"
+          },
+          "liquidity_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LiquidityType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "index_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IndexType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "bond_index_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BondIndexType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "ticker",
+          "current_price",
+          "asset_type"
+        ],
+        "title": "AssetCatalogRead"
+      },
+      "BondIndexType": {
+        "type": "string",
+        "enum": [
+          "selic",
+          "ipca",
+          "prefixado"
+        ],
+        "title": "BondIndexType",
+        "description": "Index types specific to government bonds."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "IndexType": {
+        "type": "string",
+        "enum": [
+          "cdi",
+          "ipca",
+          "prefixado"
+        ],
+        "title": "IndexType",
+        "description": "Index types for fixed income assets."
+      },
+      "LiquidityType": {
+        "type": "string",
+        "enum": [
+          "diaria",
+          "no_vencimento",
+          "periodica"
+        ],
+        "title": "LiquidityType",
+        "description": "Liquidity classifications for fixed income assets."
+      },
+      "PortfolioRead": {
+        "properties": {
+          "id_portfolio": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id Portfolio"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id_portfolio"
+        ],
+        "title": "PortfolioRead"
+      },
+      "PortfolioSummaryRead": {
+        "properties": {
+          "total_cost": {
+            "type": "string",
+            "title": "Total Cost"
+          },
+          "total_equity": {
+            "type": "string",
+            "title": "Total Equity"
+          },
+          "total_pnl": {
+            "type": "string",
+            "title": "Total Pnl"
+          },
+          "return_percentage": {
+            "type": "string",
+            "title": "Return Percentage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_cost",
+          "total_equity",
+          "total_pnl",
+          "return_percentage"
+        ],
+        "title": "PortfolioSummaryRead"
+      },
+      "PositionRead": {
+        "properties": {
+          "asset": {
+            "$ref": "#/components/schemas/AssetCatalogRead"
+          },
+          "quantity": {
+            "type": "string",
+            "title": "Quantity"
+          },
+          "average_price": {
+            "type": "string",
+            "title": "Average Price"
+          },
+          "current_price": {
+            "type": "string",
+            "title": "Current Price"
+          },
+          "cost_basis": {
+            "type": "string",
+            "title": "Cost Basis"
+          },
+          "market_value": {
+            "type": "string",
+            "title": "Market Value"
+          },
+          "pnl": {
+            "type": "string",
+            "title": "Pnl"
+          },
+          "return_percentage": {
+            "type": "string",
+            "title": "Return Percentage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "asset",
+          "quantity",
+          "average_price",
+          "current_price",
+          "cost_basis",
+          "market_value",
+          "pnl",
+          "return_percentage"
+        ],
+        "title": "PositionRead"
+      },
+      "TokenRead": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token"
+        ],
+        "title": "TokenRead"
+      },
+      "TransactionCreate": {
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Price"
+          },
+          "transaction_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Transaction Date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ticker",
+          "quantity",
+          "price",
+          "transaction_date"
+        ],
+        "title": "TransactionCreate"
+      },
+      "TransactionRead": {
+        "properties": {
+          "id_transaction": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id Transaction"
+          },
+          "asset": {
+            "$ref": "#/components/schemas/AssetBaseRead"
+          },
+          "quantity": {
+            "type": "string",
+            "title": "Quantity"
+          },
+          "price": {
+            "type": "string",
+            "title": "Price"
+          },
+          "transaction_type": {
+            "$ref": "#/components/schemas/TransactionType"
+          },
+          "transaction_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Transaction Date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id_transaction",
+          "asset",
+          "quantity",
+          "price",
+          "transaction_type",
+          "transaction_date"
+        ],
+        "title": "TransactionRead"
+      },
+      "TransactionType": {
+        "type": "string",
+        "enum": [
+          "buy",
+          "sell"
+        ],
+        "title": "TransactionType",
+        "description": "Transaction actions for portfolio trading."
+      },
+      "UserCreate": {
+        "properties": {
+          "user_name": {
+            "type": "string",
+            "maxLength": 50,
+            "title": "User Name"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_name",
+          "password"
+        ],
+        "title": "UserCreate"
+      },
+      "UserLogin": {
+        "properties": {
+          "user_name": {
+            "type": "string",
+            "title": "User Name"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_name",
+          "password"
+        ],
+        "title": "UserLogin"
+      },
+      "UserRead": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "user_name": {
+            "type": "string",
+            "title": "User Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "user_name"
+        ],
+        "title": "UserRead"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "OAuth2PasswordBearer": {
+        "type": "oauth2",
+        "flows": {
+          "password": {
+            "scopes": {},
+            "tokenUrl": "auth/login"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,638 @@
+{
+  "base_commit": "fcfd48b",
+  "note": "Respostas capturadas antes da migração; dados sintéticos; token e cabeçalhos de autenticação omitidos. Preços são cadastrados, sem consulta ao mercado.",
+  "examples": [
+    {
+      "name": "authentication_required",
+      "request": {
+        "method": "GET",
+        "path": "/assets"
+      },
+      "response": {
+        "status_code": 401,
+        "json": {
+          "detail": "Not authenticated"
+        }
+      }
+    },
+    {
+      "name": "registration",
+      "request": {
+        "method": "POST",
+        "path": "/auth/register",
+        "json": {
+          "user_name": "baseline_user",
+          "password": "synthetic-baseline-password"
+        }
+      },
+      "response": {
+        "status_code": 200,
+        "json": {
+          "user_id": "bd1c67a5-1f83-4929-8796-908ec76a5f69",
+          "user_name": "baseline_user"
+        }
+      }
+    },
+    {
+      "name": "duplicate_user",
+      "request": {
+        "method": "POST",
+        "path": "/auth/register",
+        "json": {
+          "user_name": "baseline_user",
+          "password": "synthetic-baseline-password"
+        }
+      },
+      "response": {
+        "status_code": 409,
+        "json": {
+          "detail": "Nome de usuário já está em uso"
+        }
+      }
+    },
+    {
+      "name": "login",
+      "request": {
+        "method": "POST",
+        "path": "/auth/login",
+        "json": {
+          "user_name": "baseline_user",
+          "password": "synthetic-baseline-password"
+        }
+      },
+      "response": {
+        "status_code": 200,
+        "json": {
+          "access_token": "<token omitido>",
+          "token_type": "bearer"
+        }
+      }
+    },
+    {
+      "name": "admin_catalog",
+      "request": {
+        "method": "POST",
+        "path": "/admin/assets",
+        "json": {
+          "assets": [
+            {
+              "type": "national_stock",
+              "name": "Acao de exemplo",
+              "ticker": "ABCD3",
+              "current_price": "35.00"
+            },
+            {
+              "type": "international_stock",
+              "name": "Acao internacional de exemplo",
+              "ticker": "EXAMPLE",
+              "current_price": "50.00"
+            },
+            {
+              "type": "real_estate_fund",
+              "name": "FII de exemplo",
+              "ticker": "FUND11",
+              "current_price": "100.00"
+            },
+            {
+              "type": "cryptocurrency",
+              "name": "Cripto de exemplo",
+              "ticker": "COIN",
+              "current_price": "200.00"
+            },
+            {
+              "type": "cdb",
+              "name": "CDB de exemplo",
+              "ticker": "CDBFT",
+              "current_price": "100.00",
+              "rate": "0.12",
+              "maturity_date": "2030-01-01",
+              "fgc_covered": true,
+              "liquidity_type": "diaria",
+              "index_type": "cdi"
+            },
+            {
+              "type": "government_bond",
+              "name": "Titulo de exemplo",
+              "ticker": "GOVFT",
+              "current_price": "100.00",
+              "rate": "0.10",
+              "maturity_date": "2030-01-01",
+              "liquidity_type": "diaria",
+              "bond_index_type": "prefixado"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status_code": 200,
+        "json": [
+          {
+            "id": "4065ed7e-6d38-43da-a070-44973ac2c0df",
+            "name": "Acao de exemplo",
+            "ticker": "ABCD3",
+            "current_price": "35.00000000",
+            "asset_type": "national_stock",
+            "rate": null,
+            "maturity_date": null,
+            "fgc_covered": null,
+            "liquidity_type": null,
+            "index_type": null,
+            "bond_index_type": null
+          },
+          {
+            "id": "d0a01a65-0227-4a9e-a932-d11cc8182365",
+            "name": "Acao internacional de exemplo",
+            "ticker": "EXAMPLE",
+            "current_price": "50.00000000",
+            "asset_type": "international_stock",
+            "rate": null,
+            "maturity_date": null,
+            "fgc_covered": null,
+            "liquidity_type": null,
+            "index_type": null,
+            "bond_index_type": null
+          },
+          {
+            "id": "5ed092d5-0a07-42ad-866e-c613314f6c7b",
+            "name": "FII de exemplo",
+            "ticker": "FUND11",
+            "current_price": "100.00000000",
+            "asset_type": "real_estate_fund",
+            "rate": null,
+            "maturity_date": null,
+            "fgc_covered": null,
+            "liquidity_type": null,
+            "index_type": null,
+            "bond_index_type": null
+          },
+          {
+            "id": "eb1b20dc-fbba-49dd-b288-2cc227cf5898",
+            "name": "Cripto de exemplo",
+            "ticker": "COIN",
+            "current_price": "200.00000000",
+            "asset_type": "cryptocurrency",
+            "rate": null,
+            "maturity_date": null,
+            "fgc_covered": null,
+            "liquidity_type": null,
+            "index_type": null,
+            "bond_index_type": null
+          },
+          {
+            "id": "1717f116-3341-4bfa-8d73-dd1321745522",
+            "name": "CDB de exemplo",
+            "ticker": "CDBFT",
+            "current_price": "100.00000000",
+            "asset_type": "cdb",
+            "rate": "0.12000000",
+            "maturity_date": "2030-01-01",
+            "fgc_covered": true,
+            "liquidity_type": "diaria",
+            "index_type": "cdi",
+            "bond_index_type": null
+          },
+          {
+            "id": "fca812eb-eb23-4f59-b307-993641215674",
+            "name": "Titulo de exemplo",
+            "ticker": "GOVFT",
+            "current_price": "100.00000000",
+            "asset_type": "government_bond",
+            "rate": "0.10000000",
+            "maturity_date": "2030-01-01",
+            "fgc_covered": null,
+            "liquidity_type": "diaria",
+            "index_type": null,
+            "bond_index_type": "prefixado"
+          }
+        ]
+      }
+    },
+    {
+      "name": "catalog",
+      "request": {
+        "method": "GET",
+        "path": "/assets"
+      },
+      "response": {
+        "status_code": 200,
+        "json": [
+          {
+            "id": "4065ed7e-6d38-43da-a070-44973ac2c0df",
+            "name": "Acao de exemplo",
+            "ticker": "ABCD3",
+            "current_price": "35.00000000",
+            "asset_type": "national_stock",
+            "rate": null,
+            "maturity_date": null,
+            "fgc_covered": null,
+            "liquidity_type": null,
+            "index_type": null,
+            "bond_index_type": null
+          },
+          {
+            "id": "1717f116-3341-4bfa-8d73-dd1321745522",
+            "name": "CDB de exemplo",
+            "ticker": "CDBFT",
+            "current_price": "100.00000000",
+            "asset_type": "cdb",
+            "rate": "0.12000000",
+            "maturity_date": "2030-01-01",
+            "fgc_covered": true,
+            "liquidity_type": "diaria",
+            "index_type": "cdi",
+            "bond_index_type": null
+          },
+          {
+            "id": "eb1b20dc-fbba-49dd-b288-2cc227cf5898",
+            "name": "Cripto de exemplo",
+            "ticker": "COIN",
+            "current_price": "200.00000000",
+            "asset_type": "cryptocurrency",
+            "rate": null,
+            "maturity_date": null,
+            "fgc_covered": null,
+            "liquidity_type": null,
+            "index_type": null,
+            "bond_index_type": null
+          },
+          {
+            "id": "d0a01a65-0227-4a9e-a932-d11cc8182365",
+            "name": "Acao internacional de exemplo",
+            "ticker": "EXAMPLE",
+            "current_price": "50.00000000",
+            "asset_type": "international_stock",
+            "rate": null,
+            "maturity_date": null,
+            "fgc_covered": null,
+            "liquidity_type": null,
+            "index_type": null,
+            "bond_index_type": null
+          },
+          {
+            "id": "5ed092d5-0a07-42ad-866e-c613314f6c7b",
+            "name": "FII de exemplo",
+            "ticker": "FUND11",
+            "current_price": "100.00000000",
+            "asset_type": "real_estate_fund",
+            "rate": null,
+            "maturity_date": null,
+            "fgc_covered": null,
+            "liquidity_type": null,
+            "index_type": null,
+            "bond_index_type": null
+          },
+          {
+            "id": "fca812eb-eb23-4f59-b307-993641215674",
+            "name": "Titulo de exemplo",
+            "ticker": "GOVFT",
+            "current_price": "100.00000000",
+            "asset_type": "government_bond",
+            "rate": "0.10000000",
+            "maturity_date": "2030-01-01",
+            "fgc_covered": null,
+            "liquidity_type": "diaria",
+            "index_type": null,
+            "bond_index_type": "prefixado"
+          }
+        ]
+      }
+    },
+    {
+      "name": "portfolios",
+      "request": {
+        "method": "GET",
+        "path": "/portfolios"
+      },
+      "response": {
+        "status_code": 200,
+        "json": [
+          {
+            "id_portfolio": "d9ada5de-741c-4d9f-82a6-ced32b7a7f1a"
+          }
+        ]
+      }
+    },
+    {
+      "name": "buy",
+      "request": {
+        "method": "POST",
+        "path": "/portfolios/buy",
+        "json": {
+          "ticker": "ABCD3",
+          "quantity": "10",
+          "price": "30.00",
+          "transaction_date": "2026-09-25"
+        }
+      },
+      "response": {
+        "status_code": 200,
+        "json": {
+          "id_transaction": "7d3eea62-cecb-4892-93d5-796ea3e7b80b",
+          "asset": {
+            "id": "4065ed7e-6d38-43da-a070-44973ac2c0df",
+            "name": "Acao de exemplo",
+            "ticker": "ABCD3",
+            "current_price": "35.00000000"
+          },
+          "quantity": "10.00000000",
+          "price": "30.00000000",
+          "transaction_type": "buy",
+          "transaction_date": "2026-09-25"
+        }
+      }
+    },
+    {
+      "name": "positions_after_buy",
+      "request": {
+        "method": "GET",
+        "path": "/portfolios/positions"
+      },
+      "response": {
+        "status_code": 200,
+        "json": [
+          {
+            "asset": {
+              "id": "4065ed7e-6d38-43da-a070-44973ac2c0df",
+              "name": "Acao de exemplo",
+              "ticker": "ABCD3",
+              "current_price": "35.00000000",
+              "asset_type": "national_stock",
+              "rate": null,
+              "maturity_date": null,
+              "fgc_covered": null,
+              "liquidity_type": null,
+              "index_type": null,
+              "bond_index_type": null
+            },
+            "quantity": "10.00000000",
+            "average_price": "30.00000000",
+            "current_price": "35.00000000",
+            "cost_basis": "300.0000000000000000",
+            "market_value": "350.0000000000000000",
+            "pnl": "50.0000000000000000",
+            "return_percentage": "16.66666666666666666666666667"
+          }
+        ]
+      }
+    },
+    {
+      "name": "summary_after_buy",
+      "request": {
+        "method": "GET",
+        "path": "/portfolios/summary"
+      },
+      "response": {
+        "status_code": 200,
+        "json": {
+          "total_cost": "300.0000000000000000",
+          "total_equity": "350.0000000000000000",
+          "total_pnl": "50.0000000000000000",
+          "return_percentage": "16.66666666666666666666666667"
+        }
+      }
+    },
+    {
+      "name": "same_day_sell",
+      "request": {
+        "method": "POST",
+        "path": "/portfolios/sell",
+        "json": {
+          "ticker": "ABCD3",
+          "quantity": "4",
+          "price": "40.00",
+          "transaction_date": "2026-09-25"
+        }
+      },
+      "response": {
+        "status_code": 200,
+        "json": {
+          "id_transaction": "44ec0eea-2411-41a7-b8e7-6cd5294b3d16",
+          "asset": {
+            "id": "4065ed7e-6d38-43da-a070-44973ac2c0df",
+            "name": "Acao de exemplo",
+            "ticker": "ABCD3",
+            "current_price": "35.00000000"
+          },
+          "quantity": "4.00000000",
+          "price": "40.00000000",
+          "transaction_type": "sell",
+          "transaction_date": "2026-09-25"
+        }
+      }
+    },
+    {
+      "name": "history",
+      "request": {
+        "method": "GET",
+        "path": "/portfolios/transactions"
+      },
+      "response": {
+        "status_code": 200,
+        "json": [
+          {
+            "id_transaction": "7d3eea62-cecb-4892-93d5-796ea3e7b80b",
+            "asset": {
+              "id": "4065ed7e-6d38-43da-a070-44973ac2c0df",
+              "name": "Acao de exemplo",
+              "ticker": "ABCD3",
+              "current_price": "35.00000000"
+            },
+            "quantity": "10.00000000",
+            "price": "30.00000000",
+            "transaction_type": "buy",
+            "transaction_date": "2026-09-25"
+          },
+          {
+            "id_transaction": "44ec0eea-2411-41a7-b8e7-6cd5294b3d16",
+            "asset": {
+              "id": "4065ed7e-6d38-43da-a070-44973ac2c0df",
+              "name": "Acao de exemplo",
+              "ticker": "ABCD3",
+              "current_price": "35.00000000"
+            },
+            "quantity": "4.00000000",
+            "price": "40.00000000",
+            "transaction_type": "sell",
+            "transaction_date": "2026-09-25"
+          }
+        ]
+      }
+    },
+    {
+      "name": "portfolio_history",
+      "request": {
+        "method": "GET",
+        "path": "/portfolios/d9ada5de-741c-4d9f-82a6-ced32b7a7f1a/transactions"
+      },
+      "response": {
+        "status_code": 200,
+        "json": [
+          {
+            "id_transaction": "7d3eea62-cecb-4892-93d5-796ea3e7b80b",
+            "asset": {
+              "id": "4065ed7e-6d38-43da-a070-44973ac2c0df",
+              "name": "Acao de exemplo",
+              "ticker": "ABCD3",
+              "current_price": "35.00000000"
+            },
+            "quantity": "10.00000000",
+            "price": "30.00000000",
+            "transaction_type": "buy",
+            "transaction_date": "2026-09-25"
+          },
+          {
+            "id_transaction": "44ec0eea-2411-41a7-b8e7-6cd5294b3d16",
+            "asset": {
+              "id": "4065ed7e-6d38-43da-a070-44973ac2c0df",
+              "name": "Acao de exemplo",
+              "ticker": "ABCD3",
+              "current_price": "35.00000000"
+            },
+            "quantity": "4.00000000",
+            "price": "40.00000000",
+            "transaction_type": "sell",
+            "transaction_date": "2026-09-25"
+          }
+        ]
+      }
+    },
+    {
+      "name": "positions_after_sell",
+      "request": {
+        "method": "GET",
+        "path": "/portfolios/positions"
+      },
+      "response": {
+        "status_code": 200,
+        "json": [
+          {
+            "asset": {
+              "id": "4065ed7e-6d38-43da-a070-44973ac2c0df",
+              "name": "Acao de exemplo",
+              "ticker": "ABCD3",
+              "current_price": "35.00000000",
+              "asset_type": "national_stock",
+              "rate": null,
+              "maturity_date": null,
+              "fgc_covered": null,
+              "liquidity_type": null,
+              "index_type": null,
+              "bond_index_type": null
+            },
+            "quantity": "6.00000000",
+            "average_price": "30.00000000",
+            "current_price": "35.00000000",
+            "cost_basis": "180.0000000000000000",
+            "market_value": "210.0000000000000000",
+            "pnl": "30.0000000000000000",
+            "return_percentage": "16.66666666666666666666666667"
+          }
+        ]
+      }
+    },
+    {
+      "name": "summary_after_sell",
+      "request": {
+        "method": "GET",
+        "path": "/portfolios/summary"
+      },
+      "response": {
+        "status_code": 200,
+        "json": {
+          "total_cost": "180.0000000000000000",
+          "total_equity": "210.0000000000000000",
+          "total_pnl": "30.0000000000000000",
+          "return_percentage": "16.66666666666666666666666667"
+        }
+      }
+    },
+    {
+      "name": "insufficient_balance",
+      "request": {
+        "method": "POST",
+        "path": "/portfolios/sell",
+        "json": {
+          "ticker": "ABCD3",
+          "quantity": "10",
+          "price": "30.00",
+          "transaction_date": "2026-09-25"
+        }
+      },
+      "response": {
+        "status_code": 422,
+        "json": {
+          "detail": "Não é possivel vender mais do que possui"
+        }
+      }
+    },
+    {
+      "name": "unknown_asset",
+      "request": {
+        "method": "GET",
+        "path": "/assets/00000000-0000-0000-0000-000000000000"
+      },
+      "response": {
+        "status_code": 404,
+        "json": {
+          "detail": "Ativo não encontrado"
+        }
+      }
+    },
+    {
+      "name": "full_sale",
+      "request": {
+        "method": "POST",
+        "path": "/portfolios/sell",
+        "json": {
+          "ticker": "ABCD3",
+          "quantity": "6",
+          "price": "30.00",
+          "transaction_date": "2026-09-25"
+        }
+      },
+      "response": {
+        "status_code": 200,
+        "json": {
+          "id_transaction": "f1e88e19-279a-4a8f-a1c0-c7fc15b42d92",
+          "asset": {
+            "id": "4065ed7e-6d38-43da-a070-44973ac2c0df",
+            "name": "Acao de exemplo",
+            "ticker": "ABCD3",
+            "current_price": "35.00000000"
+          },
+          "quantity": "6.00000000",
+          "price": "30.00000000",
+          "transaction_type": "sell",
+          "transaction_date": "2026-09-25"
+        }
+      }
+    },
+    {
+      "name": "empty_positions",
+      "request": {
+        "method": "GET",
+        "path": "/portfolios/positions"
+      },
+      "response": {
+        "status_code": 200,
+        "json": []
+      }
+    },
+    {
+      "name": "empty_summary",
+      "request": {
+        "method": "GET",
+        "path": "/portfolios/summary"
+      },
+      "response": {
+        "status_code": 200,
+        "json": {
+          "total_cost": "0",
+          "total_equity": "0",
+          "total_pnl": "0",
+          "return_percentage": "0"
+        }
+      }
+    }
+  ]
+}
