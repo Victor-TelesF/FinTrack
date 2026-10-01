@@ -14,6 +14,9 @@ class AssetModel(Base):
     ticker: Mapped[str] = mapped_column(String(50))
     current_price: Mapped[Decimal] = mapped_column(Numeric(precision=18,scale=8))
     type_column: Mapped[str] = mapped_column(String(50))
+    price_provider: Mapped[str | None] = mapped_column(String(20))
+    external_price_id: Mapped[str | None] = mapped_column(String(100))
+    quote_currency: Mapped[str | None] = mapped_column(String(3))
 
     @property
     def asset_type(self) -> str:

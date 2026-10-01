@@ -32,6 +32,15 @@ class AssetAlreadyExistsError(AppError):
         super().__init__(message)
 
 
+class InvalidAssetQuoteMetadataError(AppError):
+    pass
+
+
+class AssetCurrencyLockedError(AppError):
+    def __init__(self):
+        super().__init__("Moeda de ativo com transações só pode ser alterada por migração específica")
+
+
 class PortfolioNotFoundError(AppError):
 
     def __init__(self, message: str = "Carteira não encontrada"):
