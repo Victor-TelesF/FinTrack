@@ -7,6 +7,17 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      POSTGRES_USER: fintrack
+      POSTGRES_PASSWORD: fintrack
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: fintrack
+      SECRET_KEY: ci-secret-key
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      ADMIN_KEY: ci-admin-key
+      BRAPI_TOKEN: ""
     services:
       postgres:
         image: postgres:15-alpine
@@ -33,26 +44,25 @@ jobs:
           enable-cache: true
       - run: uv sync --locked
       - name: Run migrations
-        env:
-          POSTGRES_USER: fintrack
-          POSTGRES_PASSWORD: fintrack
-          POSTGRES_HOST: localhost
-          POSTGRES_PORT: 5432
-          POSTGRES_DB: fintrack
-          SECRET_KEY: ci-secret-key
-          ALGORITHM: HS256
-          ACCESS_TOKEN_EXPIRE_MINUTES: 30
-          ADMIN_KEY: ci-admin-key
         run: uv run --locked alembic upgrade head
       - name: Run tests
-        env:
-          POSTGRES_USER: fintrack
-          POSTGRES_PASSWORD: fintrack
-          POSTGRES_HOST: localhost
-          POSTGRES_PORT: 5432
-          POSTGRES_DB: fintrack
-          SECRET_KEY: ci-secret-key
-          ALGORITHM: HS256
-          ACCESS_TOKEN_EXPIRE_MINUTES: 30
-          ADMIN_KEY: ci-admin-key
         run: uv run --locked pytest -q
+
+  production-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and start isolated production image
+        run: docker compose -p fintrack-release-ci -f docker-compose.validation.yml up --build --wait --wait-timeout 120
+      - name: Verify runtime and complete HTTP flow
+        run: docker compose -p fintrack-release-ci -f docker-compose.validation.yml exec -T web python -m scripts.check_release
+      - name: Graceful shutdown
+        run: |
+          docker compose -p fintrack-release-ci -f docker-compose.validation.yml stop -t 30 web
+          docker compose -p fintrack-release-ci -f docker-compose.validation.yml logs --no-color web | tee /tmp/fintrack-shutdown.log
+          grep -q 'Application shutdown complete' /tmp/fintrack-shutdown.log
+      - name: Logs and cleanup
+        if: always()
+        run: |
+          docker compose -p fintrack-release-ci -f docker-compose.validation.yml logs --no-color
+          docker compose -p fintrack-release-ci -f docker-compose.validation.yml down --volumes
