@@ -1,20 +1,17 @@
+from collections.abc import Mapping
 from decimal import Decimal
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
-from app.models import AssetModel
 from domain.protocols import PriceSource
 
 
-class DatabasePriceSource(PriceSource):
+class InMemoryPriceSource(PriceSource):
+    """Synchronous price snapshot; all database I/O happens before evaluation."""
 
-    def __init__(self, db: Session):
-        self._db = db
+    def __init__(self, prices: Mapping[str, Decimal]):
+        self._prices = dict(prices)
 
     def get_latest_price(self, ticker: str) -> Decimal:
-        statement = select(AssetModel.current_price).where(AssetModel.ticker == ticker)
-        price = self._db.execute(statement).scalar_one_or_none()
-        if price is None:
-            raise KeyError(f"Preço não disponível para o ticker {ticker}")
-        return price
+        try:
+            return self._prices[ticker]
+        except KeyError:
+            raise KeyError(f"Preço não disponível para o ticker {ticker}") from None

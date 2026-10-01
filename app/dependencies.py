@@ -3,8 +3,7 @@ from collections.abc import AsyncIterator
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
-from .database import AsyncSessionLocal, SessionLocal
+from .database import AsyncSessionLocal
 from .config import settings
 from .auth import PasswordHandler, TokenHandler
 from .service import AuthService
@@ -17,11 +16,6 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 async def get_db() -> AsyncIterator[AsyncSession]:
     async with AsyncSessionLocal() as db:
-        yield db
-
-
-def get_sync_db():
-    with SessionLocal() as db:
         yield db
 
 
@@ -47,7 +41,7 @@ def get_asset_service(db: AsyncSession = Depends(get_db)) -> AssetService:
     return AssetService(db)
 
 
-def get_portfolio_service(db: Session = Depends(get_sync_db)) -> PortfolioService:
+def get_portfolio_service(db: AsyncSession = Depends(get_db)) -> PortfolioService:
     return PortfolioService(db)
 
 async def get_current_user(
