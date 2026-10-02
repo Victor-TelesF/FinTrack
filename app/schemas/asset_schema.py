@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -41,6 +41,31 @@ class AssetCatalogRead(AssetBaseRead):
     liquidity_type: LiquidityType | None = None
     index_type: IndexType | None = None
     bond_index_type: BondIndexType | None = None
+
+
+class MarketQuoteRead(BaseModel):
+    price: Decimal
+    currency: str
+    source: str
+    quoted_at: datetime | None = None
+    fetched_at: datetime
+
+
+class MarketAssetRead(BaseModel):
+    ticker: str
+    name: str
+    asset_type: str
+    quote_currency: str
+    quote: MarketQuoteRead | None = None
+
+
+class MarketAssetSearchRead(BaseModel):
+    items: list[MarketAssetRead]
+    page: int
+    limit: int
+    total_items: int
+    total_pages: int
+    has_next_page: bool = False
 
 
 class AssetQuoteCatalogRead(AssetCatalogRead, QuoteMetadata):
