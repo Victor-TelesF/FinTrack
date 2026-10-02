@@ -8,6 +8,7 @@ def settings(**kwargs):
     return Settings(
         _env_file=None, POSTGRES_USER="test", POSTGRES_PASSWORD="test",
         POSTGRES_HOST="localhost", POSTGRES_PORT=5432, POSTGRES_DB="test",
+        DATABASE_SSLMODE="disable",
         SECRET_KEY="synthetic", ALGORITHM="HS256", ACCESS_TOKEN_EXPIRE_MINUTES=30,
         **kwargs,
     )
