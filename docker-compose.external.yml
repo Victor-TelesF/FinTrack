@@ -1,0 +1,30 @@
+# Preparation only: requires an existing database and a CA file in runtime.
+# Never provisions a database, AWS resource or production deployment.
+services:
+  release:
+    image: fintrack:local
+    build: .
+    command: ["sh", "/app/release.sh"]
+    env_file: .env
+    environment: &tls
+      DATABASE_SSLMODE: verify-full
+      DATABASE_SSLROOTCERT: /run/certs/postgres-ca.pem
+    volumes: &ca
+      - type: bind
+        source: ${DATABASE_CA_FILE:?Set DATABASE_CA_FILE to the existing PostgreSQL CA file}
+        target: /run/certs/postgres-ca.pem
+        read_only: true
+    restart: "no"
+    healthcheck:
+      disable: true
+  web:
+    image: fintrack:local
+    build: .
+    env_file: .env
+    environment: *tls
+    volumes: *ca
+    ports:
+      - "${PORT:-8000}:${PORT:-8000}"
+    depends_on:
+      release:
+        condition: service_completed_successfully

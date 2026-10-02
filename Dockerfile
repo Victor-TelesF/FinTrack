@@ -15,11 +15,13 @@ COPY pyproject.toml uv.lock .python-version ./
 RUN uv sync --locked --no-dev --no-cache
 
 COPY . .
-RUN chmod +x /app/start.sh
+RUN chmod +x /app/start.sh /app/release.sh
 
 RUN useradd --create-home appuser && chown -R appuser:appuser /app /opt/venv
 USER appuser
 
 EXPOSE 8000
 
-ENTRYPOINT ["sh", "/app/start.sh"]
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 CMD python -c "import os, urllib.request; urllib.request.urlopen('http://localhost:' + os.environ.get('PORT', '8000') + '/health/ready', timeout=4)"
+
+CMD ["sh", "/app/start.sh"]

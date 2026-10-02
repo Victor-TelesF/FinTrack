@@ -1,8 +1,11 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy import text
 from .config import settings
 from .database import async_engine
 from .routers import admin_router, asset_router, auth_router, portfolio_router, portfolio_v2_router
@@ -41,6 +44,23 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="FinTrack API", lifespan=lifespan)
+
+
+@app.get("/health/live", include_in_schema=False)
+async def liveness():
+    return {"status": "alive"}
+
+
+@app.get("/health/ready", include_in_schema=False)
+async def readiness():
+    try:
+        async with asyncio.timeout(settings.DATABASE_READY_TIMEOUT):
+            async with async_engine.connect() as connection:
+                await connection.execute(text("SELECT 1"))
+    except Exception:
+        # No driver error, hostname, credentials or external service details in HTTP/logs.
+        return JSONResponse(status_code=503, content={"status": "unavailable"})
+    return {"status": "ready"}
 
 app.add_middleware(
     CORSMiddleware,

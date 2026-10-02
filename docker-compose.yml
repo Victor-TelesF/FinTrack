@@ -1,4 +1,17 @@
 services:
+  release:
+    build: .
+    command: ["sh", "/app/release.sh"]
+    env_file:
+      - .env
+    environment:
+      DATABASE_SSLMODE: disable
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    healthcheck:
+      disable: true
   web:
     build: .
     ports:
@@ -7,11 +20,13 @@ services:
       - .:/app
     env_file:
       - .env
+    environment:
+      DATABASE_SSLMODE: disable
     depends_on:
-      db:
-        condition: service_healthy
+      release:
+        condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/openapi.json', timeout=3)"]
+      test: ["CMD", "python", "-c", "import os, urllib.request; urllib.request.urlopen('http://localhost:' + os.environ.get('PORT', '8000') + '/health/ready', timeout=4)"]
       interval: 10s
       timeout: 5s
       retries: 5

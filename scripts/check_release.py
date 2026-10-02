@@ -16,7 +16,7 @@ from app.config import settings
 
 
 def main():
-    if settings.POSTGRES_DB != "release_test" or settings.BRAPI_TOKEN.get_secret_value():
+    if settings.database_url.database != "release_test" or settings.BRAPI_TOKEN.get_secret_value():
         raise RuntimeError("Use only the isolated release_test stack with an empty BRAPI_TOKEN")
     assert os.getuid() != 0, "Production application must run as a non-root user"
     assert all(importlib.util.find_spec(name) is None for name in (
@@ -33,13 +33,16 @@ def main():
         engine.dispose()
 
     suffix = uuid4().hex[:10].upper()
-    with httpx.Client(base_url="http://127.0.0.1:8000", timeout=15) as client:
+    with httpx.Client(base_url=os.environ.get("FINTRACK_CHECK_BASE_URL", "http://127.0.0.1:8000"),
+                      timeout=15, trust_env=False) as client:
         def request(method, path, *, status=200, **kwargs):
             response = client.request(method, path, **kwargs)
             assert response.status_code == status, (method, path, response.status_code)
             return response.json()
 
         request("GET", "/openapi.json")
+        assert request("GET", "/health/live") == {"status": "alive"}
+        assert request("GET", "/health/ready") == {"status": "ready"}
         request("GET", "/api/v2/portfolios/summary", status=401)
         credentials = {"user_name": f"release_{suffix}", "password": "synthetic-password"}
         request("POST", "/auth/register", json=credentials)
