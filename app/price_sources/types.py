@@ -50,6 +50,32 @@ class QuoteFailure:
 type QuoteResult = MarketQuote | QuoteFailure
 
 
+@dataclass(frozen=True)
+class MarketAsset:
+    ticker: str
+    name: str
+    asset_type: str
+    quote_currency: str
+    quote: MarketQuote | None = None
+
+
+@dataclass(frozen=True)
+class MarketAssetSearchResult:
+    items: list[MarketAsset]
+    page: int
+    limit: int
+    total_items: int
+    total_pages: int
+    has_next_page: bool = False
+
+
+@dataclass(frozen=True)
+class MarketProviderCapability:
+    provider: str
+    supported_asset_types: tuple[str, ...]
+    quote_currency: str = "BRL"
+
+
 class AsyncPriceSource(Protocol):
     batch_size: int
 

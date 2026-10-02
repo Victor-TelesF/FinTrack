@@ -20,6 +20,25 @@ class QuoteService:
         self._inflight: dict[PriceKey, asyncio.Task[dict[PriceKey, QuoteResult]]] = {}
         self._closed = False
 
+    @property
+    def capabilities(self):
+        capability = getattr(self._source, "get_capabilities", None)
+        if callable(capability):
+            return capability()
+        return getattr(self._source, "capabilities", None)
+
+    async def search_market(self, query: str, asset_type: str, page: int = 1, limit: int = 20):
+        search = getattr(self._source, "search_market", None)
+        if not callable(search):
+            raise NotImplementedError("Market discovery is not supported by this price source")
+        return await search(query, asset_type, page=page, limit=limit)
+
+    async def resolve_market(self, ticker: str, asset_type: str | None = None):
+        resolve = getattr(self._source, "resolve_market", None)
+        if not callable(resolve):
+            raise NotImplementedError("Market resolution is not supported by this price source")
+        return await resolve(ticker, asset_type)
+
     async def get_quotes(self, requests: Sequence[PriceRequest]) -> dict[UUID, Quote]:
         if self._closed:
             raise RuntimeError("Quote service is closed")
