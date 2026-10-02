@@ -75,7 +75,7 @@ Edite `.env`: defina as chaves de autenticação/administração e as credenciai
 docker compose up --build
 ```
 
-Abra [localhost:8000/docs](http://localhost:8000/docs). A inicialização aplica as migrations automaticamente.
+Abra [localhost:8000/docs](http://localhost:8000/docs). O Compose executa a release de migrations antes da API; iniciar a API diretamente exige uma release anterior. Consulte [operação](docs/operacao.md) para PostgreSQL externo, TLS e healthchecks.
 
 Para experimentar no Swagger local:
 
@@ -171,5 +171,6 @@ Limites desta versão:
 - [Contratos da API](docs/api.md): autenticação, cadastro, compra, avaliação e erros.
 - [Operação e atualização](docs/operacao.md): configuração, Render, migrations, frontend e retorno.
 - [Guia de contribuição](CONTRIBUTING.md): testes, microcommits e o que deve entrar no GitHub.
+- [Pesquisa de mercado e primeira compra](docs/plans/market-discovery/plan.md): etapas 0–1 concluídas; configuração/release preparadas, descoberta e primeira compra pendentes.
 
 Desenvolvido por [Victor Teles](https://github.com/Victor-TelesF). Distribuído sob a [licença MIT](LICENSE).

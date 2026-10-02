@@ -40,11 +40,12 @@ Aguarde `docker exec fintrack-contrib-test-db pg_isready -U fintrack_test -d fin
 ```bash
 POSTGRES_USER=fintrack_test POSTGRES_PASSWORD=fintrack_test \
 POSTGRES_HOST=127.0.0.1 POSTGRES_PORT=15435 POSTGRES_DB=fintrack_test \
+DATABASE_URL= DATABASE_SSLMODE=disable \
 SECRET_KEY=synthetic-test-key ALGORITHM=HS256 ACCESS_TOKEN_EXPIRE_MINUTES=30 \
 ADMIN_KEY=test-admin-key BRAPI_TOKEN= uv run --locked pytest -q
 ```
 
-Essas variáveis têm precedência sobre `.env` e `.env.test`. Os testes de cotações usam respostas simuladas. Testes específicos de migrations validam upgrade do zero e com dados antigos; a criação de tabelas das fixtures HTTP não substitui essa verificação.
+Essas variáveis têm precedência sobre `.env` e `.env.test`; `DATABASE_URL=` força os componentes sintéticos e `DATABASE_SSLMODE=disable` é explícito para este PostgreSQL local. Adicione essas opções a configurações locais de teste anteriores; não use `disable` no banco externo. Os testes de cotações usam respostas simuladas. Testes específicos de migrations validam upgrade do zero e com dados antigos; a criação de tabelas das fixtures HTTP não substitui essa verificação. Testes TLS opt-in são pulados nesta execução comum; o [harness TLS](docs/operacao.md#validar-tls-sem-docker) cria seu próprio servidor/certificados e executa esses testes junto da suíte completa.
 
 Ao terminar, remova somente o recurso descartável criado acima:
 
