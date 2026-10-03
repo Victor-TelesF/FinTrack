@@ -6,11 +6,12 @@ from uuid import uuid4
 import pytest
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import MetaData, create_engine, inspect, select
+from sqlalchemy import MetaData, create_engine, inspect, select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.schema import CreateSchema, DropSchema
 
 PREVIOUS = "72768f7801ec"
-CURRENT = "9d2a6c4e8f10"
+CURRENT = "c41e7a29b603"
 QUOTE_FIELDS = {"price_provider", "external_price_id", "quote_currency"}
 
 
@@ -54,6 +55,14 @@ def test_migration_from_empty_database(migration_database):
     assert {name: columns[name]["type"].length for name in QUOTE_FIELDS} == {
         "price_provider": 20, "external_price_id": 100, "quote_currency": 3,
     }
+    assert columns["name"]["type"].__class__.__name__ == "TEXT"
+    with engine.connect() as connection:
+        indexdef = connection.scalar(text(
+            "SELECT indexdef FROM pg_indexes "
+            "WHERE schemaname = current_schema() AND indexname = 'uq_asset_ticker_normalized'"
+        ))
+        assert "UNIQUE INDEX" in indexdef
+        assert "upper" in indexdef and "btrim" in indexdef and "ticker" in indexdef
     metadata = MetaData()
     metadata.reflect(engine)
     with engine.connect() as connection:
@@ -71,7 +80,10 @@ def test_upgrade_and_downgrade_preserve_legacy_rows(migration_database, legacy_h
         connection.execute(tables["user"].insert().values(
             user_id=user_id, user_name="migration_owner", hash_password="synthetic"))
         connection.execute(tables["portfolio"].insert().values(id_portfolio=portfolio_id, user_id=user_id))
-        for payload in legacy_http_examples["admin_catalog"]["request"]["json"]["assets"]:
+        payloads = [dict(item) for item in legacy_http_examples["admin_catalog"]["request"]["json"]["assets"]]
+        legacy_stock = next(item for item in payloads if item["type"] == "national_stock")
+        legacy_stock["ticker"] = " petr4 "
+        for payload in payloads:
             asset_id = uuid4()
             connection.execute(tables["asset"].insert().values(
                 id=asset_id, name=payload["name"], ticker=payload["ticker"],
@@ -98,14 +110,73 @@ def test_upgrade_and_downgrade_preserve_legacy_rows(migration_database, legacy_h
     with engine.connect() as connection:
         rows = list(connection.execute(select(upgraded.tables["asset"])).mappings())
         assert len(rows) == 6
+        legacy_stock = next(row for row in rows if row["type_column"] == "national_stock")
+        assert legacy_stock["ticker"] == " petr4 "
         for row in rows:
             assert row["quote_currency"] == {
                 "national_stock": "BRL", "international_stock": "USD",
             }.get(row["type_column"])
             assert row["price_provider"] is None
             assert row["external_price_id"] is None
+    with pytest.raises(IntegrityError):
+        with engine.begin() as connection:
+            connection.execute(upgraded.tables["asset"].insert().values(
+                id=uuid4(), name="Duplicate", ticker="PETR4",
+                current_price=Decimal("1"), type_column="national_stock"))
     command.downgrade(config, PREVIOUS)
     assert snapshot(engine) == before
     assert QUOTE_FIELDS.isdisjoint(column["name"] for column in inspect(engine).get_columns("asset"))
     command.upgrade(config, "head")
     assert snapshot(engine) == before
+
+
+def test_migration_stops_on_normalized_ticker_collisions(migration_database):
+    config, engine = migration_database
+    command.upgrade(config, PREVIOUS)
+    metadata = MetaData()
+    metadata.reflect(engine)
+    asset = metadata.tables["asset"]
+    ids = [uuid4(), uuid4()]
+    with engine.begin() as connection:
+        connection.execute(asset.insert(), [
+            {"id": ids[0], "name": "First", "ticker": "PETR4",
+             "current_price": Decimal("1"), "type_column": "national_stock"},
+            {"id": ids[1], "name": "Second", "ticker": " petr4 ",
+             "current_price": Decimal("2"), "type_column": "national_stock"},
+        ])
+
+    with pytest.raises(RuntimeError, match=r"1 collision group"):
+        command.upgrade(config, "head")
+
+    with engine.connect() as connection:
+        rows = list(connection.execute(select(asset.c.id, asset.c.ticker)).all())
+        version = connection.scalar(select(metadata.tables["alembic_version"].c.version_num))
+        index_exists = connection.scalar(text(
+            "SELECT count(*) FROM pg_indexes "
+            "WHERE schemaname = current_schema() AND indexname = 'uq_asset_ticker_normalized'"
+        ))
+    assert {row.id for row in rows} == set(ids)
+    assert {row.ticker for row in rows} == {"PETR4", " petr4 "}
+    assert version == PREVIOUS
+    assert index_exists == 0
+
+
+def test_downgrade_refuses_to_truncate_long_asset_names(migration_database):
+    config, engine = migration_database
+    command.upgrade(config, PREVIOUS)
+    command.upgrade(config, "head")
+    metadata = MetaData()
+    metadata.reflect(engine)
+    asset = metadata.tables["asset"]
+    name = "Asset name longer than fifty characters that must remain intact"
+    with engine.begin() as connection:
+        connection.execute(asset.insert().values(
+            id=uuid4(), name=name, ticker="LONG1", current_price=Decimal("1"),
+            type_column="national_stock"))
+    with pytest.raises(RuntimeError, match="longer value"):
+        command.downgrade(config, PREVIOUS)
+    with engine.connect() as connection:
+        stored_name = connection.scalar(select(asset.c.name))
+        version = connection.scalar(select(metadata.tables["alembic_version"].c.version_num))
+    assert stored_name == name
+    assert version == CURRENT
