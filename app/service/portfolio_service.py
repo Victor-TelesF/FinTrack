@@ -4,7 +4,7 @@ from uuid import UUID
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, raiseload, with_polymorphic
 
@@ -12,6 +12,7 @@ from app.errors.exceptions import (
     InvalidPortfolioTransactionError,
     PortfolioNotFoundError,
 )
+from app.asset_identity import normalize_ticker
 from app.mappers.asset_mapper import AssetMapper
 from app.models import AssetModel, PortfolioModel, TransactionModel
 from app.schemas.transaction_schema import TransactionCreate
@@ -256,7 +257,9 @@ class PortfolioService:
         return portfolio
 
     async def _get_asset(self, ticker: str) -> AssetModel:
-        statement = select(portfolio_asset).where(portfolio_asset.ticker == ticker)
+        statement = select(portfolio_asset).where(
+            func.upper(func.btrim(portfolio_asset.ticker)) == normalize_ticker(ticker)
+        )
         asset = (await self._db.execute(statement)).scalar_one_or_none()
         if asset is None:
             raise InvalidPortfolioTransactionError("Ativo não encontrado")

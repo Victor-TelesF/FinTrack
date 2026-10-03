@@ -4,12 +4,13 @@ import re
 from typing import TypeVar
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import with_polymorphic
 
 from app.mappers.asset_mapper import AssetMapper
+from app.asset_identity import normalize_ticker
 from app.models import (
     AssetModel,
     TransactionModel,
@@ -62,15 +63,44 @@ class AssetService:
     async def create(self, asset_data: AssetCreate) -> AssetModel:
         asset = _domain_asset_from_schema(asset_data)
         model = AssetMapper.to_model(asset)
+        model.ticker = normalize_ticker(model.ticker)
         _apply_quote_metadata(model, asset_data, new=True)
-        self._db.add(model)
         try:
-            await self._db.commit()
+            async with self._db.begin_nested():
+                self._db.add(model)
+                await self._db.flush()
         except IntegrityError:
-            await self._db.rollback()
             raise AssetAlreadyExistsError()
+        await self._db.commit()
         await self._db.refresh(model)
         return model
+
+    async def get_or_create(self, asset_data: AssetCreate) -> tuple[AssetModel, bool]:
+        """Resolve a normalized identity without committing the caller's transaction."""
+        asset = _domain_asset_from_schema(asset_data)
+        model = AssetMapper.to_model(asset)
+        model.ticker = normalize_ticker(model.ticker)
+        _apply_quote_metadata(model, asset_data, new=True)
+        identity = normalize_ticker(model.ticker)
+
+        existing = await self._find_by_identity(identity)
+        if existing is not None:
+            _ensure_compatible_identity(existing, model)
+            return existing, False
+
+        try:
+            async with self._db.begin_nested():
+                self._db.add(model)
+                await self._db.flush()
+        except IntegrityError:
+            # The unique expression index may have won a concurrent insert. The
+            # savepoint rollback leaves the caller's transaction usable.
+            existing = await self._find_by_identity(identity)
+            if existing is None:
+                raise AssetAlreadyExistsError()
+            _ensure_compatible_identity(existing, model)
+            return existing, False
+        return model, True
 
     async def list(self) -> list[AssetModel]:
         statement = select(catalog_asset).order_by(catalog_asset.ticker)
@@ -86,26 +116,30 @@ class AssetService:
     async def upsert_many(self, assets: list[AdminAssetItem]) -> list[AssetModel]:
         models = []
         try:
+            identities = {normalize_ticker(item.ticker) for item in assets}
             # Consistent lock order prevents overlapping batches from deadlocking.
             existing_models = list((await self._db.scalars(
                 select(catalog_asset)
-                .where(catalog_asset.ticker.in_([item.ticker for item in assets]))
+                .where(func.upper(func.btrim(catalog_asset.ticker)).in_(identities))
                 .order_by(catalog_asset.id)
                 .with_for_update(of=AssetModel)
                 .execution_options(populate_existing=True)
             )).all())
-            by_ticker = {model.ticker: model for model in existing_models}
+            by_ticker = {normalize_ticker(model.ticker): model for model in existing_models}
             for asset_data in assets:
-                existing = by_ticker.get(asset_data.ticker)
+                identity = normalize_ticker(asset_data.ticker)
+                existing = by_ticker.get(identity)
                 if existing is not None and existing.type_column != asset_data.type:
                     raise InvalidAssetQuoteMetadataError("Tipo de ativo existente não pode ser alterado")
                 domain_asset = _domain_asset_from_admin_item(asset_data)
                 if existing is None:
                     model = AssetMapper.to_model(domain_asset)
+                    model.ticker = identity
                     _apply_quote_metadata(model, asset_data, new=True)
                     self._db.add(model)
-                    by_ticker[asset_data.ticker] = model
+                    by_ticker[identity] = model
                 else:
+                    stored_ticker = existing.ticker
                     previous_currency = existing.quote_currency
                     _apply_quote_metadata(existing, asset_data, new=False)
                     if previous_currency != existing.quote_currency:
@@ -118,6 +152,9 @@ class AssetService:
                         if has_transactions is not None:
                             raise AssetCurrencyLockedError()
                     model = AssetMapper.to_model(domain_asset, model=existing)
+                    # Upserts can find legacy case/space variants, but must not
+                    # rewrite the ticker of an asset that already has history.
+                    model.ticker = stored_ticker
                 models.append(model)
             await self._db.commit()
         except IntegrityError:
@@ -129,6 +166,12 @@ class AssetService:
         for model in models:
             await self._db.refresh(model)
         return models
+
+    async def _find_by_identity(self, identity: str) -> AssetModel | None:
+        statement = select(catalog_asset).where(
+            func.upper(func.btrim(catalog_asset.ticker)) == identity
+        )
+        return (await self._db.execute(statement)).scalar_one_or_none()
 
 
 def _apply_quote_metadata(model: AssetModel, data: QuoteMetadata, *, new: bool) -> None:
@@ -148,6 +191,25 @@ def _apply_quote_metadata(model: AssetModel, data: QuoteMetadata, *, new: bool) 
             raise InvalidAssetQuoteMetadataError("Informe um símbolo brapi válido, com letras maiúsculas e números")
     elif model.external_price_id is not None:
         raise InvalidAssetQuoteMetadataError("Identificador externo exige um provedor de mercado")
+
+
+def _ensure_compatible_identity(existing: AssetModel, candidate: AssetModel) -> None:
+    if existing.type_column != candidate.type_column:
+        raise InvalidAssetQuoteMetadataError("Tipo de ativo existente não pode ser alterado")
+    if existing.quote_currency != candidate.quote_currency:
+        raise InvalidAssetQuoteMetadataError("Moeda incompatível com o ativo existente")
+    if (
+        existing.price_provider is not None
+        and candidate.price_provider is not None
+        and existing.price_provider != candidate.price_provider
+    ):
+        raise InvalidAssetQuoteMetadataError("Origem incompatível com o ativo existente")
+    if (
+        existing.external_price_id is not None
+        and candidate.external_price_id is not None
+        and existing.external_price_id != candidate.external_price_id
+    ):
+        raise InvalidAssetQuoteMetadataError("Identidade externa incompatível com o ativo existente")
 
 
 

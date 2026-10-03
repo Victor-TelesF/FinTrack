@@ -1,10 +1,11 @@
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from decimal import Decimal
 from uuid import UUID
 from domain.enums import BondIndexType, IndexType, LiquidityType
+from app.asset_identity import normalize_ticker
 
 class QuoteMetadata(BaseModel):
     price_provider: Literal["manual", "brapi"] | None = Field(
@@ -21,6 +22,11 @@ class AssetBaseCreate(QuoteMetadata):
     name: str
     ticker: str
     current_price: Decimal
+
+    @field_validator("ticker", mode="before")
+    @classmethod
+    def canonicalize_ticker(cls, value: str) -> str:
+        return normalize_ticker(value) if isinstance(value, str) else value
     
 
 class AssetBaseRead(BaseModel):
@@ -86,6 +92,11 @@ class AdminAssetItem(QuoteMetadata):
     liquidity_type: LiquidityType | None = None
     index_type: IndexType | None = None
     bond_index_type: BondIndexType | None = None
+
+    @field_validator("ticker", mode="before")
+    @classmethod
+    def canonicalize_ticker(cls, value: str) -> str:
+        return normalize_ticker(value) if isinstance(value, str) else value
 
 
 class AdminAssetUpsertRequest(BaseModel):
