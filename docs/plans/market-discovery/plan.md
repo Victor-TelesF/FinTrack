@@ -1,8 +1,8 @@
 # Pesquisa de mercado e cadastro na primeira compra
 
-Data: 02/10/2026. Estado: **etapas 0, 1, 2a e 2b concluídas; etapa 3a pendente de autorização**. Etapa 1 validada com PostgreSQL TLS descartável e runtime sem dev; imagem/Compose em execução e infraestrutura externa continuam pendentes.
+Data: 02/10/2026. Estado: **etapas 0, 1, 2a, 2b e 3a concluídas; etapa 3b pendente de autorização**. Etapa 1 validada com PostgreSQL TLS descartável e runtime sem dev; imagem/Compose em execução e infraestrutura externa continuam pendentes.
 
-Branch de trabalho: **`refactor/market-discovery`**, criada após o planejamento por solicitação do usuário, a partir de `feature/v2-async-prices` em `80a6af7`. Alterações documentais preservadas sem commit. A base de inspeção abaixo permanece histórica.
+Branch de trabalho: **`refactor/market-discovery`**, criada após o planejamento por solicitação do usuário, a partir de `feature/v2-async-prices` em `80a6af7`. A etapa 3a foi autorizada em 02/10/2026; micro commits e push ao final foram solicitados. A base de inspeção abaixo permanece histórica.
 
 Comece pelo [handoff](handoff.md). O [contrato HTTP](api-contract.md) define a entrega pretendida; o [progresso](progress.md) separa evidências atuais de resultados históricos. Este trabalho sucede a v2 async/preços já implementada, sem substituir seu plano ou repetir suas etapas.
 
@@ -15,7 +15,7 @@ Decisões do usuário na etapa 0, preservadas na etapa 1:
 - Manter os provedores gratuitos. Usar brapi para ações brasileiras e FIIs.
 - A preferência inicial por cripto na brapi foi revista após duas respostas reais 403: **criptomoedas ficam pendentes de uma fonte gratuita**. Não contratar plano pago nem integrar CoinGecko nesta entrega.
 - Preparar interfaces para outras fontes, mantendo regras financeiras independentes do provedor.
-- Executar uma etapa por conversa, com parada e atualização documental. A etapa 0 limitou-se a inspeção e planejamento. Em 02/10/2026, o usuário autorizou somente a etapa 1, sem commit, push, deploy ou provisão AWS; depois autorizou as etapas 2a e 2b separadamente. O pedido posterior para fazer micro commits autoriza registrar localmente apenas as mudanças já concluídas; não autoriza a etapa 3a, push, deploy ou AWS.
+- Executar uma etapa por conversa, com parada e atualização documental. A etapa 0 limitou-se a inspeção e planejamento. Em 02/10/2026, o usuário autorizou as etapas 1, 2a, 2b e 3a em conversas separadas. O pedido atual autoriza micro commits da etapa 3a e push ao final; não autoriza 3b, deploy ou provisão AWS.
 
 Preservar domínio síncrono, `Decimal`, IDs e histórico existentes, preço informado da operação, isolamento de usuários, ativos antigos e as duas leituras v2. Sem conversão cambial automática. Cripto antiga continua negociável quando já cadastrada; sua moeda e origem não podem ser inferidas retroativamente.
 
@@ -96,7 +96,7 @@ Futura integração gratuita de cripto será outro escopo: verificar acesso/lice
 
 ## Etapas e critérios de conclusão
 
-As divisões 2a/2b e 3a/3b evitam misturar arquitetura, rotas e concorrência numa conversa. Executar **uma linha da tabela por conversa**, atualizando os quatro documentos e parando. A próxima autorização necessária é a etapa 2a.
+As divisões 2a/2b e 3a/3b evitam misturar arquitetura, rotas e concorrência numa conversa. Executar **uma linha da tabela por conversa**, atualizando os quatro documentos e parando. A próxima autorização necessária é a etapa 3b.
 
 | Etapa | Escopo | Estado |
 |---|---|---|
@@ -104,7 +104,7 @@ As divisões 2a/2b e 3a/3b evitam misturar arquitetura, rotas e concorrência nu
 | 1 | Configuração PostgreSQL externo, container e release | Concluída; micro commits locais solicitados depois |
 | 2a | Contratos/registro de provedores e descoberta brapi | Concluída e validada |
 | 2b | Rotas autenticadas de pesquisa/detalhe | Concluída e validada com PostgreSQL do projeto |
-| 3a | Identidade do catálogo e migration de unicidade | Pendente |
+| 3a | Identidade do catálogo e migration de unicidade | Concluída e validada com PostgreSQL; preflight de dados externos continua obrigatório antes de aplicar fora de testes |
 | 3b | Cadastro transacional na primeira compra | Pendente |
 | 4 | Remover admin após validar o novo fluxo | Pendente |
 | 5 | Regressões, contrato final e roteiro de deploy | Pendente |
@@ -164,6 +164,10 @@ Arquivos: modelo de ativo, Alembic, repositório/serviço de catálogo e testes 
 Ticker continua identidade local única nesta entrega; novas identidades canônicas são normalizadas em uppercase, preservando IDs e tickers existentes. Garantir unicidade e lookup pela mesma identidade normalizada; um índice único de expressão `upper(btrim(ticker))` permite conservar a grafia dos registros antigos sem aceitar novos duplicados por case/espaços. Inspecionar duplicidades e colisões de normalização numa cópia antes de adicionar essa garantia. Não deduplicar, renomear ou apagar ativos históricos automaticamente: se houver colisão, parar a migration com diagnóstico sem segredos e solicitar estratégia para os dados. Definir validação coerente para todos os escritores ainda existentes, inclusive admin até sua remoção. Ampliar nome para acomodar metadados válidos sem truncamento silencioso, se necessário.
 
 Aceite: upgrade vazio e populado, constraint efetiva no PostgreSQL, dois cadastros concorrentes resultam num ativo/ID, falha recuperável por savepoint/on-conflict sem destruir a transação externa. Nome/identidade/tipo/moeda incompatíveis não sobrescrevem ativo existente. Downgrade da nova migration/reaplicação verificados; dados e relacionamentos preservados. Não testar só com `create_all`.
+
+**Status em 02/10/2026:** concluída neste branch. Migration `c41e7a29b603` aborta antes do DDL se houver colisões de `upper(btrim(ticker))`, aplica índice único de expressão e amplia `asset.name` para `TEXT`. Escritas novas normalizam ticker; leituras/upserts usam a mesma identidade e preservam grafia/IDs antigos. `AssetService.get_or_create()` usa savepoint e deixa a transação do chamador aberta. Downgrade recusa nomes maiores que 50 caracteres em vez de truncá-los.
+
+Validação: upgrade vazio e populado, constraint, rollback por colisão, downgrade/reaplicação, preservação de seis subclasses/relacionamentos e concorrência de dois `get_or_create()` foram exercitados com PostgreSQL descartável. Os bancos locais `fintrack_db` e `fintrack_test_db` não tinham tabela `asset`; não há cópia local com catálogo histórico para auditar, e produção não foi consultada. Antes de aplicar a migration em qualquer banco com dados reais, conferir as colisões no snapshot autorizado; o preflight da migration interrompe sem alterar linhas se encontrar grupos duplicados. Evidências detalhadas em [progress.md](progress.md).
 
 ### Etapa 3b — primeira compra
 

@@ -1,6 +1,6 @@
 # Retomada — pesquisa de mercado
 
-Atualizado em **02/10/2026**. **Etapas 1, 2a e 2b concluídas; as alterações foram organizadas em micro commits locais a pedido do usuário.** Próxima etapa é a 3a, ainda sem autorização. Etapa 1 tem limites de Docker/infraestrutura externa registrados abaixo; a etapa 2a foi validada sem entrar no fluxo de rotas de mercado, e a etapa 2b foi confirmada usando o Postgres do projeto.
+Atualizado em **02/10/2026**. **Etapas 1, 2a, 2b e 3a concluídas e validadas.** O usuário autorizou micro commits da etapa 3a e push ao final desta etapa; etapa 3b continua aguardando autorização. Etapa 1 tem limites de Docker/infraestrutura externa registrados abaixo; a etapa 2a foi validada sem entrar no fluxo de rotas de mercado, e a etapa 2b foi confirmada usando o Postgres do projeto.
 
 **Branch de trabalho atual: `refactor/market-discovery`**, criada a pedido do usuário a partir de `feature/v2-async-prices`, em `80a6af7`. As etapas concluídas foram gravadas em commits locais; consulte `git log --oneline` para o HEAD atual e os hashes registrados em [progress.md](progress.md). Sem push, deploy ou provisão AWS.
 
@@ -8,7 +8,7 @@ Atualizado em **02/10/2026**. **Etapas 1, 2a e 2b concluídas; as alterações f
 
 1. Ler `AGENTS.md` e este arquivo.
 2. Ler [plano](plan.md), especialmente a etapa autorizada, [contrato](api-contract.md) e último registro em [progresso](progress.md).
-3. Conferir `git status --short`, `git branch --show-current` e `git log -5 --oneline`. Preservar alterações existentes; não fazer push/deploy.
+3. Conferir `git status --short`, `git branch --show-current` e `git log -5 --oneline`. Preservar alterações existentes. Push só quando explicitamente autorizado; deploy/AWS seguem fora de escopo.
 4. Usar a v2 async existente como base. Os registros anteriores em `docs/continuidade-v2-async-prices.md` são históricos e apontam para este trabalho.
 
 Base desta etapa: branch `feature/v2-async-prices`; HEAD `80a6af7`, `docs(readme): present portfolio workflows and contribution guide`. Git estava limpo antes do planejamento. A v2 já está nos commits `7c0d35e` (brapi), `4500ecb` (cache), `bcfd491` (metadados), `29a98dd` (carteira async), `9291f24` (avaliação v2) e `e791bdd` (CI/imagem). Não repetir o plano async nem tratar HEAD `fcfd48b` dos relatórios antigos como estado atual.
@@ -54,12 +54,16 @@ Verificação documental final: **9 documentos, 71 links locais, 2 blocos JSON**
 - `/health/live` 200 alive; `/health/ready` 200 ready ou 503 unavailable após SELECT 1, sem informações privadas. Fora do Swagger; readiness não atesta schema/brapi. Shutdown de serviço/HTTPX/engine preservado.
 - Render: preparar comando da API/release separados. Pre-deploy pago não é pressuposto de gratuidade; execução controlada da release precisa ser definida antes de uma publicação futura autorizada. Nenhuma configuração remota alterada.
 
-## Próxima etapa concreta (aguardando autorização)
+## Etapa 3a concluída e próxima etapa (aguardando autorização)
 
-Etapa **3a**: ler a seção correspondente no plano; conferir duplicidades e colisões de ticker normalizado em banco descartável/cópia antes de propor a migration. Preservar dados antigos; não deduplicar, renomear ou excluir automaticamente. Se houver colisões, registrar diagnóstico sem segredos e pedir decisão sobre a estratégia antes de migrar. **Não iniciar a 3a sem autorização explícita; não avançar para a 3b, remoção do admin, push, deploy ou AWS.**
+Implementada a identidade normalizada do catálogo e a migration `c41e7a29b603`. Novos tickers são gravados em uppercase e lookups/upserts usam `upper(btrim(ticker))`; os ativos existentes mantêm IDs e grafia. Índice único PostgreSQL impede novas colisões. A migration aborta com contagem de grupos antes do DDL se encontrar duplicidades e não altera linhas históricas. `asset.name` foi ampliado de `VARCHAR(50)` para `TEXT`; downgrade protege nomes longos contra truncamento. `AssetService.get_or_create()` deixa a transação externa aberta e lida com concorrência por savepoint.
 
-Validação de imagem/Compose fica pendente até o daemon estar disponível; não bloqueia o ponto de retomada 2b permitido pelo aceite de infraestrutura da etapa 1. Não iniciar nenhum trabalho adicional nesta conversa.
+Os bancos locais `fintrack_db` e `fintrack_test_db` não tinham tabela `asset`, então não havia catálogo histórico local para copiar e auditar. Nenhum banco de produção foi consultado. A migration e seus guardas foram exercitados em PostgreSQL descartável com cenários sintéticos: vazio, populado, colisão, unicidade, downgrade/reaplicação, relacionamentos e concorrência. Antes de aplicar em qualquer banco com dados reais, conferir colisões num snapshot autorizado; o preflight aborta sem modificar linhas se houver conflito.
 
-Prompt para autorizar em outro chat:
+**Próxima etapa autorizável: 3b**, primeira compra transacional. Manter o limite de uma etapa por conversa; não remover admin (etapa 4), não fazer deploy nem provisionar AWS. Push do branch desta etapa foi autorizado pelo usuário; conferir `git status`/histórico antes de qualquer continuação.
 
-> Leia AGENTS.md e docs/plans/market-discovery/handoff.md. Execute somente a etapa 3a, preserve as decisões e os dados históricos, confira duplicidades antes da migration, atualize os quatro documentos e pare antes da 3b. Não faça push, deploy nem provisione AWS.
+Validação de imagem/Compose fica pendente até o daemon estar disponível; não bloqueia a etapa 3a nem antecipa a etapa 5.
+
+Prompt de retomada:
+
+> Leia AGENTS.md e docs/plans/market-discovery/handoff.md. Execute somente a etapa 3b, preserve os dados e contratos legados, faça o cadastro na primeira compra de forma transacional e pare antes da etapa 4. Não faça deploy nem provisione AWS.

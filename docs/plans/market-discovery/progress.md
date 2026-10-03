@@ -158,3 +158,37 @@ Este registro, o plano e o handoff foram alinhados no commit documental da mesma
 **Verificações nesta sessão:** `git diff --check` foi aprovado antes do staging e `git diff --cached --check` foi aprovado para cada grupo antes do respectivo commit. Não foram executados testes nesta sessão; os resultados 364 (etapa 1), 63/188 (etapa 2a) e 47 (etapa 2b) são evidências históricas das sessões correspondentes, não revalidações atuais.
 
 **Estado de saída:** branch `refactor/market-discovery`, commits locais, sem push. A etapa 3a permanece pendente de autorização explícita; antes de uma migration, conferir colisões de ticker em banco descartável e interromper se houver dados que exijam decisão.
+
+## 02/10/2026 — etapa 3a: identidade e migration
+
+**Autorização:** o usuário autorizou iniciar somente a etapa 3a e, ao final, organizar as mudanças em micro commits e fazer push. Etapa 3b, remoção do admin, deploy e AWS continuam fora desta autorização.
+
+**Estado inicial:** branch `refactor/market-discovery`, HEAD `677a1de`; árvore limpa. Lidos AGENTS, handoff, plano, contrato e progresso antes de alterar código.
+
+**Auditoria antes da migration:** os bancos locais `fintrack_db` e `fintrack_test_db` foram conferidos sem imprimir dados pessoais; ambos não tinham relação `asset`. Não existe catálogo histórico local que possa ser copiado para auditar colisões e nenhum banco de produção foi consultado. A migration implementa preflight obrigatório e aborta sem tocar nas linhas se encontrar grupos que colidam em `upper(btrim(ticker))`. Os casos de banco populado e colisão foram exercitados com dados sintéticos em schemas PostgreSQL descartáveis.
+
+**Implementação:**
+
+- Migration `c41e7a29b603` cria índice único de expressão sobre `upper(btrim(ticker))` após o preflight. O downgrade só volta `asset.name` a 50 caracteres se todos os nomes couberem; caso contrário falha sem truncar.
+- `asset.name` foi ampliado de `VARCHAR(50)` para `TEXT` para acomodar nomes do provedor sem truncamento silencioso.
+- `normalize_ticker()` aplica strip/uppercase nas novas escritas. Catálogo e carteira resolvem a identidade com a mesma expressão SQL. Upsert por identidade normalizada mantém o ID e a grafia do ticker legado.
+- `AssetService.get_or_create()` não confirma a transação do chamador, verifica compatibilidade de tipo/moeda/origem/ID externo e usa savepoint para a corrida do índice. Nome, preço e metadados existentes não são substituídos pelo candidato.
+- A asserção do snapshot OpenAPI foi atualizada para excluir as rotas/esquemas de pesquisa adicionados na etapa 2b, que já têm cobertura específica; as rotas públicas não foram alteradas nesta etapa.
+
+**Verificações executadas nesta sessão:**
+
+| Verificação | Resultado |
+|---|---|
+| Migration, serviço de catálogo, rotas e metadados focados | **41 passed** em 10,92 s, PostgreSQL do projeto com tabelas/fixtures descartáveis. |
+| Suíte completa | **364 passed, 6 skipped, 302 warnings** em 45,25 s. Warnings existentes de `python-jose`/`utcnow`. |
+| Migration vazio/populado | Upgrade desde o início e desde `72768f7801ec`; preservados IDs, seis subclasses, relações, transações e grafia histórica do ticker. |
+| Unicidade e colisão | PostgreSQL rejeitou ticker case/space-equivalente. Migration de catálogo duplicado abortou com uma contagem de grupo; linhas e revisão Alembic permaneceram no estado anterior. |
+| Concorrência/transação | Dois `get_or_create()` simultâneos retornaram o mesmo ID, um único ativo persistido; a sessão perdedora executou `SELECT 1` após o savepoint sem rollback da transação externa. |
+| Downgrade/reaplicação | Downgrade e re-upgrade preservaram dados/relacionamentos; com nome >50, downgrade foi recusado sem mudança de schema/dados. |
+| Alembic offline e API | Geração offline verificada; snapshot legado permanece compatível após remover da comparação as adições já cobertas pela etapa 2b. |
+
+Uma primeira execução completa revelou a ausência do preflight offline da migration e um teste de snapshot que não excluía as rotas adicionadas na etapa 2b; ambos foram corrigidos e a execução final acima passou. Nenhuma chamada externa brapi, produção, deploy, push ou provisão AWS ocorreu durante a validação.
+
+**Micro commits de implementação/teste já criados:** `f0c7087 feat(db): enforce normalized asset ticker identity`; `ab6cdbe feat(catalog): normalize ticker writes and handle create races`; `9081b2e test(api): preserve legacy OpenAPI baseline`. Este registro e os demais documentos da etapa serão commitados em grupo documental antes do push autorizado.
+
+**Continuidade:** etapa 3a concluída; próxima ação é somente a etapa 3b após autorização explícita. Push desta branch ao `origin` está autorizado e será feito depois dos micro commits. Antes de aplicar a migration a qualquer banco real com dados, ainda é obrigatório executar/verificar o preflight em um snapshot autorizado; colisões interrompem a migration sem correção automática.

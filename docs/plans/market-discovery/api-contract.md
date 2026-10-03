@@ -1,6 +1,6 @@
 # Contrato pretendido — pesquisa e primeira compra
 
-Estado em 02/10/2026: contrato de descoberta/primeira compra da etapa 0, **implementado até a descoberta do provedor na etapa 2a**. Etapa 1 de configuração/release/health concluída; rotas de mercado, cadastro e admin seguem como antes. Rotas atuais estão em [docs/api.md](../../api.md). A implementação de mercado deve atualizar Swagger e esse guia público, preservando os contratos legados exceto a remoção administrativa prevista. A etapa 2b continua aguardando autorização explícita.
+Estado em 02/10/2026: contrato de descoberta/primeira compra da etapa 0, **implementado até identidade do catálogo e migration na etapa 3a**. Etapas 1, 2a e 2b também concluídas. Rotas atuais estão em [docs/api.md](../../api.md). A próxima etapa autorizável é o cadastro transacional na primeira compra (3b); a remoção administrativa continua posterior.
 
 ## Saúde operacional — implementada na etapa 1
 
@@ -14,6 +14,14 @@ Sem detalhes do driver, credenciais, hostname privado ou stacktrace nas resposta
 ## Tipos e autenticação
 
 As duas novas rotas exigem o JWT do FinTrack em `Authorization: Bearer <token>`. A chave brapi fica exclusivamente no backend. Tipos iniciais: `national_stock` e `real_estate_fund`. Pesquisa e cadastro novo de cripto ficam pendentes de uma fonte gratuita; os tipos antigos continuam em carteiras existentes.
+
+## Identidade do catálogo — etapa 3a
+
+Ticker identifica um ativo no catálogo local por `upper(btrim(ticker))`. Novos registros são gravados em maiúsculas, com espaços externos removidos; lookups e upserts usam a mesma forma. Um índice único de expressão no PostgreSQL rejeita duplicidades por case/espaços. Ativos antigos mantêm seus IDs e a grafia original do ticker; a migration não os renomeia nem os deduplica.
+
+Se a migration encontrar mais de uma linha para a mesma identidade normalizada, ela aborta com a quantidade de grupos conflitantes antes de alterar o schema ou as linhas. `asset.name` usa `TEXT`, sem limite de 50 caracteres; o downgrade só reduz o campo se todos os nomes couberem no tamanho antigo, sem truncamento.
+
+O serviço get-or-create não confirma a transação do chamador. Em disputa concorrente, trata a violação do índice dentro de savepoint e devolve o registro compatível já criado. Um ticker igual com tipo, moeda ou identidade externa incompatíveis não atualiza o registro existente; o nome/preço/metadados já cadastrados também não são substituídos por um candidato concorrente.
 
 ## MarketAsset
 
