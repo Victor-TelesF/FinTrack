@@ -340,6 +340,12 @@ async def test_openapi_preserves_marco_a_except_additive_catalog_metadata(test_a
     # Keep the snapshot intact; allow only catalog metadata and the two v2 reads.
     current = json.loads(json.dumps(test_app.openapi()))
     schemas = current["components"]["schemas"]
+    # Market discovery was added after this legacy baseline and has dedicated
+    # route/contract coverage in test_asset_router.py.
+    for path in ("/assets/search", "/assets/market/{ticker}"):
+        current["paths"].pop(path)
+    for name in ("MarketAssetRead", "MarketAssetSearchRead", "MarketQuoteRead"):
+        schemas.pop(name)
     for path, schema in (("positions", "PositionValuationRead"), ("summary", "PortfolioValuationRead")):
         route = current["paths"].pop(f"/api/v2/portfolios/{path}")
         assert set(route) == {"get"}
