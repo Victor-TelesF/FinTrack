@@ -1,6 +1,6 @@
 # Retomada — pesquisa de mercado
 
-Atualizado em **02/10/2026**. **Etapas 1, 2a, 2b e 3a concluídas e validadas.** O usuário autorizou micro commits da etapa 3a e push ao final desta etapa; etapa 3b continua aguardando autorização. Etapa 1 tem limites de Docker/infraestrutura externa registrados abaixo; a etapa 2a foi validada sem entrar no fluxo de rotas de mercado, e a etapa 2b foi confirmada usando o Postgres do projeto.
+Atualizado em **02/10/2026**. **Etapas 1, 2a, 2b e 3a concluídas e validadas; micro commits e push da etapa 3a concluídos.** Etapa 3b continua aguardando autorização. Etapa 1 tem limites de Docker/infraestrutura externa registrados abaixo; a etapa 2a foi validada sem entrar no fluxo de rotas de mercado, e a etapa 2b foi confirmada usando o Postgres do projeto.
 
 **Branch de trabalho atual: `refactor/market-discovery`**, criada a pedido do usuário a partir de `feature/v2-async-prices`, em `80a6af7`. As etapas concluídas foram gravadas em commits locais; consulte `git log --oneline` para o HEAD atual e os hashes registrados em [progress.md](progress.md). Sem push, deploy ou provisão AWS.
 
@@ -60,7 +60,7 @@ Implementada a identidade normalizada do catálogo e a migration `c41e7a29b603`.
 
 Os bancos locais `fintrack_db` e `fintrack_test_db` não tinham tabela `asset`, então não havia catálogo histórico local para copiar e auditar. Nenhum banco de produção foi consultado. A migration e seus guardas foram exercitados em PostgreSQL descartável com cenários sintéticos: vazio, populado, colisão, unicidade, downgrade/reaplicação, relacionamentos e concorrência. Antes de aplicar em qualquer banco com dados reais, conferir colisões num snapshot autorizado; o preflight aborta sem modificar linhas se houver conflito.
 
-**Próxima etapa autorizável: 3b**, primeira compra transacional. Manter o limite de uma etapa por conversa; não remover admin (etapa 4), não fazer deploy nem provisionar AWS. Push do branch desta etapa foi autorizado pelo usuário; conferir `git status`/histórico antes de qualquer continuação.
+**Próxima etapa autorizável: 3b**, primeira compra transacional. Manter o limite de uma etapa por conversa; não remover admin (etapa 4), não fazer deploy nem provisionar AWS. O branch `refactor/market-discovery` foi enviado a `origin` e acompanha `origin/refactor/market-discovery`; conferir `git status`/histórico antes de qualquer continuação.
 
 Validação de imagem/Compose fica pendente até o daemon estar disponível; não bloqueia a etapa 3a nem antecipa a etapa 5.
 
